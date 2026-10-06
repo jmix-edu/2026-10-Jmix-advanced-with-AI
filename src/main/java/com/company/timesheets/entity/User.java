@@ -9,9 +9,10 @@ import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
 import io.jmix.security.authentication.JmixUserDetails;
 import io.jmix.security.user.PasswordChangeRequired;
-import org.springframework.security.core.GrantedAuthority;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import org.springframework.security.core.GrantedAuthority;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
@@ -24,7 +25,7 @@ import java.util.UUID;
 public class User implements JmixUserDetails, HasTimeZone {
 
     @Id
-    @Column(name = "ID")
+    @Column(name = "ID", nullable = false)
     @JmixGeneratedValue
     private UUID id;
 
@@ -63,6 +64,10 @@ public class User implements JmixUserDetails, HasTimeZone {
     @Transient
     private Collection<? extends GrantedAuthority> authorities;
 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -86,10 +91,6 @@ public class User implements JmixUserDetails, HasTimeZone {
     @Override
     public String getUsername() {
         return username;
-    }
-
-    public void setUsername(final String username) {
-        this.username = username;
     }
 
     public Boolean getActive() {
