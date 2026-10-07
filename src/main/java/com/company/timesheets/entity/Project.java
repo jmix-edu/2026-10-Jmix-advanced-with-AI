@@ -5,6 +5,7 @@ import io.jmix.core.annotation.DeletedBy;
 import io.jmix.core.annotation.DeletedDate;
 import io.jmix.core.entity.annotation.JmixGeneratedValue;
 import io.jmix.core.entity.annotation.OnDelete;
+import io.jmix.core.entity.annotation.OnDeleteInverse;
 import io.jmix.core.metamodel.annotation.Composition;
 import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
@@ -49,6 +50,7 @@ public class Project {
     private String status = ProjectStatus.OPEN.getId();
 
     @NotNull
+    @OnDeleteInverse(DeletePolicy.DENY)
     @JoinColumn(name = "CLIENT_ID", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Client client;
@@ -198,4 +200,5 @@ public class Project {
     public void setParticipants(final List<ProjectParticipant> participants) {
         this.participants = participants;
     }
+
 }
