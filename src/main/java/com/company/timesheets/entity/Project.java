@@ -1,8 +1,11 @@
 package com.company.timesheets.entity;
 
+import io.jmix.core.DeletePolicy;
 import io.jmix.core.annotation.DeletedBy;
 import io.jmix.core.annotation.DeletedDate;
 import io.jmix.core.entity.annotation.JmixGeneratedValue;
+import io.jmix.core.entity.annotation.OnDelete;
+import io.jmix.core.metamodel.annotation.Composition;
 import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
 import jakarta.persistence.*;
@@ -13,11 +16,14 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @JmixEntity
 @Entity(name = "ts_Project")
-@Table(name = "TS_PROJECT")
+@Table(name = "TS_PROJECT", indexes = {
+        @Index(name = "IDX_TS_PROJECT_ON_CLIENT", columnList = "CLIENT_ID")
+})
 public class Project {
 
     @Id
@@ -33,6 +39,24 @@ public class Project {
     @NotNull
     @Column(name = "NAME", nullable = false)
     private String name;
+
+    @Lob
+    @Column(name = "DESCRIPTION")
+    private String description;
+
+    @NotNull
+    @Column(name = "STATUS", nullable = false)
+    private String status = ProjectStatus.OPEN.getId();
+
+    @NotNull
+    @JoinColumn(name = "CLIENT_ID", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Client client;
+
+    @Composition
+    @OnDelete(DeletePolicy.CASCADE)
+    @OneToMany(mappedBy = "project")
+    private List<Task> tasks;
 
     @CreatedBy
     @Column(name = "CREATED_BY")
@@ -128,5 +152,37 @@ public class Project {
 
     public void setName(final String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(final String description) {
+        this.description = description;
+    }
+
+    public ProjectStatus getStatus() {
+        return status == null ? null : ProjectStatus.fromId(status);
+    }
+
+    public void setStatus(final ProjectStatus status) {
+        this.status = status == null ? null : status.getId();
+    }
+
+    public Client getClient() {
+        return client;
+    }
+
+    public void setClient(final Client client) {
+        this.client = client;
+    }
+
+    public List<Task> getTasks() {
+        return tasks;
+    }
+
+    public void setTasks(final List<Task> tasks) {
+        this.tasks = tasks;
     }
 }

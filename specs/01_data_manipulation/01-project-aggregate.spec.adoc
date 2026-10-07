@@ -1,0 +1,235 @@
+= 01_data_manipulation / 01 — Агрегат проекта: Client, TaskType, статусы, композиция задач
+:toc:
+:status: черновик, ждёт ревью
+
+== Цель
+
+Достроить модель из `00_setup/01` до канона курса: у проекта появляются клиент,
+описание и статус, у задачи — тип, описание и статус, а задачи становятся частью
+проекта и удаляются вместе с ним.
+
+== В области
+
+* Новая сущность `Client` со встроенным `ContactInformation`.
+* Новый справочник `TaskType`.
+* Перечисления `ProjectStatus` и `TaskStatus`.
+* Новые атрибуты `Project`: `description`, `status`, `client`.
+* Новые атрибуты `Task`: `description`, `status`, `taskType`; имя экземпляра
+  `[<имя проекта>] <имя задачи>`.
+* Композиция `Project.tasks` с каскадным удалением задач.
+* Подписи сущностей, атрибутов и констант перечислений в `messages_en.properties`.
+* Очистка тестовых данных `TS_TASK` и `TS_PROJECT` в dev-базе перед миграцией.
+* Мелкая правка экранов проекта: поле `client` в карточке, колонка `client` в
+  списке.
+* List- и detail-вью `Client` и пункт меню. Их генерирует Studio.
+* Удаление демонстрационного поля `Task.demoField` (образец `byte[]` из Studio).
+* Changelog Liquibase. Его генерирует Studio.
+
+== Вне области
+
+* Участники проекта и списания времени — следующие спеки модуля 1.
+* Аудит и soft delete как задача спеки. Поля, которые уже есть в `Project`,
+  не трогаем, на `Client`, `TaskType`, `Task` не добавляем.
+* Политики удаления по ссылкам, кроме проекта и задач: удаление клиента с
+  проектами и типа задачи с задачами по-прежнему отклоняет внешний ключ в базе.
+* Остальные экраны: вью `TaskType`, новые поля
+  `description` и `status` в формах, редактирование задач внутри карточки
+  проекта. Вью `Task` не меняем.
+* Проверка формата `url`.
+* Роли и тесты.
+
+== Модель
+
+Пакет `com.company.timesheets.entity`. Соглашения как в `00_setup/01`: префиксы
+`ts_` / `TS_`, генерируемый `UUID`, `@Version`, аксессоры вручную. Длинный текст —
+`@Lob`, тип колонки — как сгенерирует Studio. Длина строк, если не указана, —
+255 по умолчанию.
+
+=== ProjectStatus, TaskStatus
+
+Реализуют `EnumClass<String>`, у каждого `fromId()`. В сущности хранится
+строковый id, геттер и сеттер переводят его в перечисление.
+
+[cols="2,2,2",options="header"]
+|===
+| Перечисление | Константа | id
+
+.2+| `ProjectStatus` | `OPEN`     | `open`
+                     | `CLOSED`   | `closed`
+.2+| `TaskStatus`    | `ACTIVE`   | `active`
+                     | `INACTIVE` | `inactive`
+|===
+
+=== ContactInformation (встраиваемый)
+
+`@JmixEntity` + `@Embeddable`, своей таблицы нет.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `email`   | `String` | `@Email`
+| `phone`   | `String` |
+| `address` | `String` | `@Lob`
+| `url`     | `String` | без проверки формата
+|===
+
+=== Client
+
+Сущность `ts_Client`, таблица `TS_CLIENT`.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `name`               | `String`             | `@InstanceName`, `nullable = false`, `@NotNull`
+| `image`              | `byte[]`             | `@Column(name = "IMAGE")` без `@Lob`, необязательное — по образцу Studio (`Task.demoField`)
+| `contactInformation` | `ContactInformation` | `@Embedded`, обязательное: `@EmbeddedParameters(nullAllowed = false)`, `@NotNull`
+|===
+
+=== TaskType
+
+Сущность `ts_TaskType`, таблица `TS_TASK_TYPE`.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `name`        | `String` | `@InstanceName`, `nullable = false`, `@NotNull`
+| `description` | `String` | `@Lob`, длинный текст
+|===
+
+=== Project — новые атрибуты
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `description` | `String`        | `@Lob`, длинный текст
+| `status`      | `ProjectStatus` | колонка `STATUS`, `nullable = false`, `@NotNull`; по умолчанию `OPEN` — инициализатором поля
+| `client`      | `Client`        | `@ManyToOne(fetch = LAZY, optional = false)` *и* `@JoinColumn(name = "CLIENT_ID", nullable = false)`, `@NotNull`; индекс в `@Table`
+| `tasks`       | `List<Task>`    | `@Composition`, `@OnDelete(DeletePolicy.CASCADE)`, `@OneToMany(mappedBy = "project")`; поле не инициализируется
+|===
+
+=== Task — новые атрибуты
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `description` | `String`     | `@Lob`, длинный текст
+| `status`      | `TaskStatus` | колонка `STATUS`, `nullable = false`, `@NotNull`; по умолчанию `ACTIVE` — инициализатором поля
+| `taskType`    | `TaskType`   | `@ManyToOne(fetch = LAZY)`, `@JoinColumn(name = "TASK_TYPE_ID")`, необязательная; индекс в `@Table`
+|===
+
+* `Task.project` получает `@OnDeleteInverse(DeletePolicy.CASCADE)`. Остальное в
+  этой ссылке не меняется: она уже обязательная и `LAZY` и служит обратной
+  ссылкой композиции.
+* Имя экземпляра — метод с `@InstanceName` и `@DependsOnProperties({"name", "project"})`:
+  `[<project.name>] <name>`. Без проекта — просто `<name>`.
+* `@InstanceName` снимается с поля `name`.
+
+=== Каскадное удаление задач
+
+Каскад описан с двух сторон:
+
+* `Project.tasks` — `@OnDelete(DeletePolicy.CASCADE)`;
+* `Task.project` — `@OnDeleteInverse(DeletePolicy.CASCADE)`.
+
+По документации Jmix (Data Model → Entities → Deletion Policy):
+
+* для сущности с soft delete оба правила выполняет фреймворк во время работы;
+* для сущности без soft delete `@OnDeleteInverse` с `CASCADE` Studio переводит
+  в внешний ключ с `ON DELETE CASCADE` при генерации changelog.
+
+У `Project` сейчас есть soft delete, поэтому удаление проекта — это `UPDATE`, а
+не `DELETE`, и каскад выполняет Jmix. Задачи (soft delete у них нет) удаляются
+физически в той же транзакции. Каскад в базе при этом не срабатывает, потому что
+строка проекта не удаляется. Будет ли Studio генерировать `ON DELETE CASCADE`
+для ссылки на сущность с soft delete, проверяю при сверке changelog. Если
+soft delete с `Project` когда-нибудь уберут, каскад в БД из `@OnDeleteInverse`
+останется в силе.
+
+=== Удаление демонстрационного поля
+
+Studio добавила `Task.demoField` как образец `byte[]`. Changelog для него нет,
+в базе колонки нет. Удаляю из трёх мест: поле и аксессоры в `Task.java`, ключ
+`Task.demoField` в `messages_en.properties`, `fileUploadField` в
+`task-detail-view.xml`.
+
+=== Экраны проекта (мелкая правка)
+
+* `project-detail-view.xml`: `entityPicker` для `client` с действиями
+  `entity_lookup` и `entity_clear`, как у `project` в карточке задачи; выбор
+  открывает список `ts_Client.list` от Studio. `client` в fetch plan `projectDc`.
+* `project-list-view.xml`: колонка `client`, `client` в fetch plan `projectsDc`.
+* Перед правкой читаю скиллы `jmix-create-detail-view` и `jmix-create-list-view`.
+
+== Очистка тестовых данных
+
+Перед генерацией changelog и до перезапуска приложения Claude удаляет в базе
+`ts_live` все строки из `TS_TASK`, затем из `TS_PROJECT`. Удаление физическое
+(SQL `DELETE`), в обход soft delete. Другие таблицы не трогаются. Перед
+удалением Claude показывает число строк в обеих таблицах.
+
+Зачем: у `TS_PROJECT` появляется обязательный `CLIENT_ID`, и на существующих
+строках changelog с `NOT NULL` упадёт.
+
+== Кто что делает
+
+. *Вы, в Studio, до реализации:* образец встраиваемого атрибута (см. вопрос).
+. *Claude:* удаление `demoField`; очистка `TS_TASK` и `TS_PROJECT`; перечисления,
+  `ContactInformation`, `Client`, `TaskType`, изменения `Project` и `Task`,
+  ключи сообщений.
+. *Вы, в Studio:* changelog по разнице модели и БД; list- и detail-вью
+  `Client` с пунктом меню.
+. *Claude:* поле и колонка `client` на экранах проекта.
+. *Claude, Review:* сверка changelog со спекой — колонки, `NOT NULL`, индексы,
+  внешние ключи, каскад.
+. *Claude, Verify:* Gate 1, Gate 2, чек-лист Gate 3.
+
+== Открытые вопросы
+
+. *Образец встраиваемого атрибута.* Образец `byte[]` получен (`Task.demoField`),
+  а встраиваемого в проекте нет. Не уверен, какие имена колонок Studio даёт
+  атрибутам встраиваемого класса: с префиксом `CONTACT_INFORMATION_` через
+  `@AttributeOverrides` или без. Прошу так же добавить в Studio черновой
+  встраиваемый атрибут к любой сущности; удалю его вместе с `demoField`.
+
+== Критерии приёмки
+
+Проверяет Claude (сверка с changelog, Gate 1 и 2):
+
+. Перед миграцией `TS_TASK` и `TS_PROJECT` в `ts_live` пусты, остальные
+  таблицы не изменены.
+. Changelog создаёт `TS_CLIENT` (с колонками `ContactInformation`) и
+  `TS_TASK_TYPE`, добавляет `DESCRIPTION`, `STATUS`, `CLIENT_ID` в `TS_PROJECT` и
+  `DESCRIPTION`, `STATUS`, `TASK_TYPE_ID` в `TS_TASK`.
+. `TS_CLIENT.NAME`, `TS_TASK_TYPE.NAME`, `TS_PROJECT.CLIENT_ID` и оба `STATUS` — `NOT NULL`;
+  `TS_TASK.TASK_TYPE_ID` допускает `NULL`. Внешние ключи на `TS_CLIENT` и
+  `TS_TASK_TYPE` есть, индексы по `CLIENT_ID` и `TASK_TYPE_ID` объявлены и в
+  `@Table`, и в changelog.
+. Колонки длинного текста — тип `@Lob` из Studio, не `VARCHAR(255)`.
+. Перечисления: id в коде совпадают с таблицей выше, колонки `STATUS` строковые.
+. Новые `Project` и `Task`, созданные через `DataManager.create()`, уже имеют
+  статус `OPEN` и `ACTIVE` соответственно (инициализатор поля).
+. `Project.tasks` помечен `@Composition` и `@OnDelete(DeletePolicy.CASCADE)`,
+  поле не инициализируется; `Task.project` помечен
+  `@OnDeleteInverse(DeletePolicy.CASCADE)`.
+. Экраны проекта: `client` в форме, в колонке и в fetch plan обоих вью.
+. Вью `Client` от Studio: Gate 1 чистый, пункт меню есть.
+. `demoField` нет ни в коде, ни в сообщениях, ни во вью.
+. Ключи сообщений есть для всех новых сущностей, атрибутов (включая
+  `ContactInformation`) и констант перечислений.
+. Gate 1 по каждому затронутому файлу и Gate 2 (`gradle clean test`) зелёные.
+
+Проверяете вы (чек-лист Gate 3, после перезапуска приложения):
+
+. Приложение стартует, Liquibase применяет changelog к `ts_live` без ошибок.
+. Клиент создаётся в своей карточке: картинка загружается, контактные данные
+  сохраняются, с неверным email не сохраняется.
+. В карточке проекта клиент выбирается из списка клиентов, проект сохраняется;
+  без клиента не сохраняется. В списке проектов видна колонка клиента.
+. В заголовке карточки задачи — `[<проект>] <задача>`.
+. Удаление проекта с задачами из списка проектов убирает и его задачи из
+  списка задач.

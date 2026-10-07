@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
-      title="msg://projectDetailView.title"
+      title="msg://clientDetailView.title"
       focusComponent="form">
     <data>
-        <instance id="projectDc"
-                  class="com.company.timesheets.entity.Project">
-            <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
-            </fetchPlan>
-            <loader id="projectDl"/>
+        <instance id="clientDc"
+                  class="com.company.timesheets.entity.Client">
+            <fetchPlan extends="_base"/>
+            <loader id="clientDl"/>
         </instance>
     </data>
     <facets>
@@ -19,18 +17,17 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <formLayout id="form" dataContainer="projectDc">
+        <formLayout id="form" dataContainer="clientDc">
             <responsiveSteps>
                 <responsiveStep minWidth="0" columns="1"/>
                 <responsiveStep minWidth="40em" columns="2"/>
             </responsiveSteps>
             <textField id="nameField" property="name"/>
-            <entityPicker id="clientField" property="client">
-                <actions>
-                    <action id="entityLookupAction" type="entity_lookup"/>
-                    <action id="entityClearAction" type="entity_clear"/>
-                </actions>
-            </entityPicker>
+            <fileUploadField id="imageField" clearButtonVisible="true" fileNameVisible="true" property="image"/>
+            <textField id="contactInformationEmailField" property="contactInformation.email"/>
+            <textField id="contactInformationPhoneField" property="contactInformation.phone"/>
+            <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address"/>
+            <textField id="contactInformationUrlField" property="contactInformation.url"/>
         </formLayout>
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>

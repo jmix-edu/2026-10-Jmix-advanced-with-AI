@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
       xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
-      title="msg://projectListView.title"
-      focusComponent="projectsDataGrid">
+      title="msg://clientListView.title"
+      focusComponent="clientsDataGrid">
     <data>
-        <collection id="projectsDc"
-                    class="com.company.timesheets.entity.Project">
-            <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
-            </fetchPlan>
-            <loader id="projectsDl" readOnly="true">
+        <collection id="clientsDc"
+                    class="com.company.timesheets.entity.Client">
+            <fetchPlan extends="_base"/>
+            <loader id="clientsDl" readOnly="true">
                 <query>
-                    <![CDATA[select e from ts_Project e]]>
+                    <![CDATA[select e from ts_Client e]]>
                 </query>
             </loader>
         </collection>
@@ -29,23 +27,23 @@
     </actions>
     <layout>
         <genericFilter id="genericFilter"
-                       dataLoader="projectsDl">
+                       dataLoader="clientsDl">
             <properties include=".*"/>
         </genericFilter>
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
-                <button id="createButton" action="projectsDataGrid.createAction"/>
-                <button id="editButton" action="projectsDataGrid.editAction"/>
-                <button id="removeButton" action="projectsDataGrid.removeAction"/>
+                <button id="createButton" action="clientsDataGrid.createAction"/>
+                <button id="editButton" action="clientsDataGrid.editAction"/>
+                <button id="removeButton" action="clientsDataGrid.removeAction"/>
             </startSlot>
             <endSlot>
-                <simplePagination id="pagination" dataLoader="projectsDl"/>
+                <simplePagination id="pagination" dataLoader="clientsDl"/>
             </endSlot>
         </hbox>
-        <dataGrid id="projectsDataGrid"
+        <dataGrid id="clientsDataGrid"
                   width="100%"
                   minHeight="20em"
-                  dataContainer="projectsDc"
+                  dataContainer="clientsDc"
                   columnReorderingAllowed="true">
             <actions>
                 <action id="createAction" type="list_create"/>
@@ -54,7 +52,10 @@
             </actions>
             <columns resizable="true">
                 <column property="name"/>
-                <column property="client"/>
+                <column property="contactInformation.email"/>
+                <column property="contactInformation.phone"/>
+                <column property="contactInformation.address"/>
+                <column property="contactInformation.url"/>
             </columns>
         </dataGrid>
         <hbox id="lookupActions" visible="false">
