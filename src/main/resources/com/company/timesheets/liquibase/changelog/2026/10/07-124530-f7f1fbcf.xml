@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS"
+        logicalFilePath="com/company/timesheets/liquibase/changelog/2026/10/07-124530-f7f1fbcf.xml">
+    <changeSet id="1" author="ts">
+        <createTable tableName="TS_TIME_ENTRY">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_TS_TIME_ENTRY"/>
+            </column>
+            <column name="VERSION" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DATE_" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SPENT_TIME" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STATUS" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DESCRIPTION" type="CLOB"/>
+            <column name="REJECTION_REASON" type="CLOB"/>
+            <column name="TASK_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="ts">
+        <createIndex indexName="IDX_TS_TIME_ENTRY_ON_TASK" tableName="TS_TIME_ENTRY">
+            <column name="TASK_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="TASK_ID" baseTableName="TS_TIME_ENTRY"
+                                 constraintName="FK_TS_TIME_ENTRY_ON_TASK" referencedColumnNames="ID"
+                                 referencedTableName="TS_TASK"/>
+    </changeSet>
+    <changeSet id="3" author="ts">
+        <createIndex indexName="IDX_TS_TIME_ENTRY_ON_USER" tableName="TS_TIME_ENTRY">
+            <column name="USER_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="USER_ID" baseTableName="TS_TIME_ENTRY"
+                                 constraintName="FK_TS_TIME_ENTRY_ON_USER" referencedColumnNames="ID"
+                                 referencedTableName="TS_USER"/>
+    </changeSet>
+</databaseChangeLog>

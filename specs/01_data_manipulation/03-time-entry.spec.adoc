@@ -1,0 +1,190 @@
+= 01_data_manipulation / 03 — Списание времени: SpentTime, TimeEntry
+:toc:
+:status: черновик, ждёт ревью
+
+== Цель
+
+Завести запись о списанном времени и собственный тип «часы и минуты» для неё:
+в UI время вводится и показывается как `2:30`, в базе хранится числом минут.
+
+== В области
+
+* Значение `SpentTime`, Jmix-тип данных `spentTime` и JPA-конвертер.
+* Перечисление `TimeEntryStatus`.
+* Сущность `TimeEntry`.
+* Подписи сущности, атрибутов, констант перечисления в `messages_en.properties`.
+* Unit-тест на разбор и форматирование `SpentTime`.
+* List- и detail-вью `TimeEntry` и пункт меню. Их генерирует Studio.
+* Changelog Liquibase. Его генерирует Studio.
+
+== Вне области
+
+* Правила списания: кто и когда может списывать, переходы статусов, проверки
+  суммы за день, обязательность `rejectionReason` при отклонении. Это
+  бизнес-логика блока 2.
+* Аудит и soft delete.
+* Экраны, кроме списка и карточки `TimeEntry`.
+* Обратные коллекции: у `Task` и `User` не появляется списка списаний.
+* Политики удаления задачи и пользователя со списаниями: внешний ключ в базе
+  отклоняет удаление (см. «Удаление задачи со списаниями»).
+* Десятичные часы при вводе (`2.5`).
+* Тесты, кроме `SpentTime`.
+
+== Модель
+
+Соглашения как в предыдущих спеках: префиксы `ts_` / `TS_`, генерируемый
+`UUID`, `@Version`, аксессоры вручную, длинный текст — `@Lob`.
+
+=== SpentTime — значение
+
+Пакет `com.company.timesheets.datatype`.
+
+* `record SpentTime(long minutes)`; отрицательное значение — исключение в
+  конструкторе. Неизменяемое, равенство по значению.
+* Это не сущность: без `@JmixEntity`, своей таблицы нет.
+
+=== Тип данных spentTime
+
+`SpentTimeDatatype implements Datatype<SpentTime>`:
+
+* `@DatatypeDef(id = "spentTime", javaClass = SpentTime.class, defaultForClass = true)`;
+  атрибут сущности типа `SpentTime` получает этот тип без `@PropertyDatatype`.
+* `@Ddl("bigint")` — по нему Studio выбирает тип колонки.
+* `format` и `parse` с локалью и без ведут себя одинаково: формат не зависит
+  от языка.
+
+Формат вывода: `<часы>:<минуты двумя цифрами>`, часы без ограничения сверху.
+
+[cols="2,2",options="header"]
+|===
+| Минуты | Вывод
+
+| 0    | `0:00`
+| 5    | `0:05`
+| 150  | `2:30`
+| 600  | `10:00`
+| 6000 | `100:00`
+|===
+
+Разбор:
+
+[cols="2,3",options="header"]
+|===
+| Ввод | Результат
+
+| `2:30`, ` 2:30 ` | 150 минут (пробелы по краям отбрасываются)
+| `0:05`, `0:5`    | 5 минут
+| `2`              | 120 минут — только часы
+| пустая строка, `null` | `null`
+| `2:60`, `2:75`   | `ParseException`: минут не больше 59
+| `-1:00`, `abc`, `2:`, `:30`, `2:30:00` | `ParseException`
+|===
+
+`ParseException` в поле формы Jmix показывает как ошибку ввода.
+
+=== SpentTimeConverter
+
+`@Converter(autoApply = true)`, `AttributeConverter<SpentTime, Long>`: в базу
+пишет `minutes`, из базы читает `new SpentTime(value)`; `null` ↔ `null`.
+
+=== TimeEntryStatus
+
+`EnumClass<String>` с `fromId()`; в сущности хранится строковый id.
+
+[cols="2,2",options="header"]
+|===
+| Константа | id
+
+| `NEW`      | `new`
+| `APPROVED` | `approved`
+| `REJECTED` | `rejected`
+| `CLOSED`   | `closed`
+|===
+
+=== TimeEntry
+
+Пакет `com.company.timesheets.entity`. Сущность `ts_TimeEntry`, таблица
+`TS_TIME_ENTRY`.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `date`            | `LocalDate`       | колонка `DATE_` (см. ниже), `nullable = false`, `@NotNull`; по умолчанию — сегодня, в `@PostConstruct`
+| `spentTime`       | `SpentTime`       | колонка `SPENT_TIME` (`BIGINT`), `nullable = false`, `@NotNull`
+| `status`          | `TimeEntryStatus` | колонка `STATUS`, `nullable = false`, `@NotNull`; по умолчанию `NEW` — инициализатором поля
+| `description`     | `String`          | `@Lob`
+| `rejectionReason` | `String`          | `@Lob`
+| `task`            | `Task`            | `@ManyToOne(fetch = LAZY, optional = false)` *и* `@JoinColumn(name = "TASK_ID", nullable = false)`, `@NotNull`
+| `user`            | `User`            | то же, `@JoinColumn(name = "USER_ID", nullable = false)`
+|===
+
+* Колонка даты — `DATE_`, а не `DATE`: `DATE` — зарезервированное слово
+  стандарта SQL. PostgreSQL его пропускает, но имя с подчёркиванием одинаково
+  работает во всех базах (тот же приём в примере `YEAR_` документации Jmix).
+* Индексы по `TASK_ID` и `USER_ID` в `@Table(indexes = ...)`, имена совпадают с
+  changelog.
+* Имя экземпляра — метод `getDisplayName(DatatypeFormatter formatter)` с
+  `@InstanceName` и `@DependsOnProperties({"date", "task"})`: дата в формате
+  пользователя и имя экземпляра задачи через пробел, например
+  `07.10.26 [Проект] Задача`. Пустые части пропускаются. Jmix передаёт
+  Spring-бины в параметры метода имени экземпляра.
+
+=== Удаление задачи со списаниями
+
+Задача удаляется физически (soft delete у неё нет), в том числе каскадом при
+удалении проекта. Если у задачи есть списания, внешний ключ `TS_TIME_ENTRY.TASK_ID`
+отклонит удаление — и удаление проекта с такими задачами тоже упадёт ошибкой
+базы. Так и оставляем: списанное время — учётные данные, терять их молча
+нельзя. Политики удаления на `TimeEntry.task` нет; понятное правило — в
+блоке 2.
+
+== Тест
+
+`SpentTimeDatatypeTest` — plain JUnit, без Spring-контекста, в
+`src/test/java/com/company/timesheets/datatype`:
+
+* форматирование — все строки таблицы вывода;
+* разбор — все строки таблицы разбора, включая ошибочные;
+* круговой проход: `parse(format(x)) == x` для нескольких значений;
+* конвертер: `SpentTime` ↔ `Long` и `null` ↔ `null`.
+
+== Кто что делает
+
+. *Claude:* `SpentTime`, `SpentTimeDatatype`, `SpentTimeConverter`,
+  `TimeEntryStatus`, `TimeEntry`, ключи сообщений, тест.
+. *Вы, в Studio:* changelog по разнице модели и БД; list- и detail-вью
+  `TimeEntry` с пунктом меню.
+. *Claude, Review:* сверка changelog и вью со спекой, в том числе тип колонки
+  `SPENT_TIME` и компонент поля `spentTime` в форме.
+. *Claude, Verify:* Gate 1, Gate 2 (с новым тестом), чек-лист Gate 3.
+
+== Критерии приёмки
+
+Проверяет Claude:
+
+. Changelog создаёт `TS_TIME_ENTRY`: `SPENT_TIME` — `BIGINT NOT NULL`,
+  `STATUS`, `TASK_ID`, `USER_ID` — `NOT NULL`, `DESCRIPTION` и
+  `REJECTION_REASON` — `CLOB`, внешние ключи на `TS_TASK` и `TS_USER`, индексы
+  совпадают с `@Table`. Существующие таблицы не меняются.
+. В карточке `TimeEntry` поле `spentTime` — текстовое поле, привязанное к
+  атрибуту (тип берётся из `spentTime`), а не числовое.
+. id констант `TimeEntryStatus` совпадают с таблицей выше; новый `TimeEntry`
+  из `DataManager.create()` уже имеет статус `NEW` и сегодняшнюю дату.
+. `DATE_` — `NOT NULL`. На `TimeEntry.task` нет `@OnDeleteInverse`, у внешнего
+  ключа `TASK_ID` нет `ON DELETE CASCADE`.
+. Ключи сообщений есть для сущности, атрибутов и констант перечисления.
+. `SpentTimeDatatypeTest` зелёный и запускается отдельно от остальных тестов.
+. Gate 1 по каждому затронутому файлу и Gate 2 (`gradle clean test`) зелёные.
+
+Проверяете вы (чек-лист Gate 3, после перезапуска приложения):
+
+. Liquibase применяет changelog к `ts_live` без ошибок.
+. В карточке списания ввод `2:30` сохраняется; в базе в `SPENT_TIME` — `150`;
+  в списке и при повторном открытии — `2:30`.
+. Ввод `2:75` или `abc` подсвечивает поле ошибкой, запись не сохраняется.
+. Новая запись открывается с сегодняшней датой и статусом `NEW`.
+. Выбор задачи и пользователя работает; без них запись не сохраняется.
+. Удаление проекта, у задачи которого есть списание, отклоняется ошибкой;
+  проект, задача и списание остаются на месте.
+. Заголовок карточки — дата и задача, например `07.10.26 [Проект] Задача`.

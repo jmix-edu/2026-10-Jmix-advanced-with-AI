@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
+      title="msg://timeEntryListView.title"
+      focusComponent="timeEntriesDataGrid">
+    <data>
+        <collection id="timeEntriesDc"
+                    class="com.company.timesheets.entity.TimeEntry">
+            <fetchPlan extends="_base">
+                <property name="user" fetchPlan="_base"/>
+            </fetchPlan>
+            <loader id="timeEntriesDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_TimeEntry e]]>
+                </query>
+            </loader>
+        </collection>
+    </data>
+    <facets>
+        <dataLoadCoordinator auto="true"/>
+        <urlQueryParameters>
+            <genericFilter component="genericFilter"/>
+            <pagination component="pagination"/>
+        </urlQueryParameters>
+    </facets>
+    <actions>
+        <action id="selectAction" type="lookup_select"/>
+        <action id="discardAction" type="lookup_discard"/>
+    </actions>
+    <layout>
+        <genericFilter id="genericFilter"
+                       dataLoader="timeEntriesDl">
+            <properties include=".*"/>
+        </genericFilter>
+        <hbox id="buttonsPanel" wrap="true" width="100%">
+            <startSlot>
+                <button id="createButton" action="timeEntriesDataGrid.createAction"/>
+                <button id="editButton" action="timeEntriesDataGrid.editAction"/>
+                <button id="removeButton" action="timeEntriesDataGrid.removeAction"/>
+            </startSlot>
+            <endSlot>
+                <simplePagination id="pagination" dataLoader="timeEntriesDl"/>
+            </endSlot>
+        </hbox>
+        <dataGrid id="timeEntriesDataGrid"
+                  width="100%"
+                  minHeight="20em"
+                  dataContainer="timeEntriesDc"
+                  columnReorderingAllowed="true">
+            <actions>
+                <action id="createAction" type="list_create"/>
+                <action id="editAction" type="list_edit"/>
+                <action id="removeAction" type="list_remove"/>
+            </actions>
+            <columns resizable="true">
+                <column property="date"/>
+                <column property="spentTime"/>
+                <column property="status"/>
+                <column property="description"/>
+                <column property="rejectionReason"/>
+                <column property="task"/>
+                <column property="user"/>
+            </columns>
+        </dataGrid>
+        <hbox id="lookupActions" visible="false">
+            <button id="selectButton" action="selectAction"/>
+            <button id="discardButton" action="discardAction"/>
+        </hbox>
+    </layout>
+</view>
