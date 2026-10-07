@@ -39,7 +39,6 @@ public class TimeEntry {
     @Column(name = "VERSION", nullable = false)
     private Integer version;
 
-    @NotNull
     @Column(name = "DATE_", nullable = false)
     private LocalDate date;
 
