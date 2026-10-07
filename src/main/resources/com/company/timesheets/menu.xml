@@ -6,6 +6,9 @@
         <item view="ts_Project.list" title="msg://com.company.timesheets.view.project/projectListView.title"/>
         <item view="ts_Task.list" title="msg://com.company.timesheets.view.task/taskListView.title"/>
         <item view="ts_Client.list" title="msg://com.company.timesheets.view.client/clientListView.title"/>
+        <item view="ts_TaskType.list" title="msg://com.company.timesheets.view.tasktype/taskTypeListView.title"/>
+        <item view="ts_ProjectRole.list"
+              title="msg://com.company.timesheets.view.projectrole/projectRoleListView.title"/>
     </menu>
 
 </menu-config>

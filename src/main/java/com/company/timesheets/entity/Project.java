@@ -58,6 +58,11 @@ public class Project {
     @OneToMany(mappedBy = "project")
     private List<Task> tasks;
 
+    @Composition
+    @OnDelete(DeletePolicy.CASCADE)
+    @OneToMany(mappedBy = "project")
+    private List<ProjectParticipant> participants;
+
     @CreatedBy
     @Column(name = "CREATED_BY")
     private String createdBy;
@@ -184,5 +189,13 @@ public class Project {
 
     public void setTasks(final List<Task> tasks) {
         this.tasks = tasks;
+    }
+
+    public List<ProjectParticipant> getParticipants() {
+        return participants;
+    }
+
+    public void setParticipants(final List<ProjectParticipant> participants) {
+        this.participants = participants;
     }
 }

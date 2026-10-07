@@ -7,6 +7,7 @@
                   class="com.company.timesheets.entity.Task">
             <fetchPlan extends="_base">
                 <property name="project" fetchPlan="_base"/>
+                <property name="taskType" fetchPlan="_base"/>
             </fetchPlan>
             <loader id="taskDl"/>
         </instance>
@@ -31,6 +32,14 @@
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
             </entityPicker>
+            <select id="statusField" property="status"/>
+            <entityPicker id="taskTypeField" property="taskType">
+                <actions>
+                    <action id="entityLookupAction" type="entity_lookup"/>
+                    <action id="entityClearAction" type="entity_clear"/>
+                </actions>
+            </entityPicker>
+            <textArea id="descriptionField" property="description"/>
         </formLayout>
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>

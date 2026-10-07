@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
       xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
-      title="msg://projectListView.title"
-      focusComponent="projectsDataGrid">
+      title="msg://taskTypeListView.title"
+      focusComponent="taskTypesDataGrid">
     <data>
-        <collection id="projectsDc"
-                    class="com.company.timesheets.entity.Project">
-            <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
-            </fetchPlan>
-            <loader id="projectsDl" readOnly="true">
+        <collection id="taskTypesDc"
+                    class="com.company.timesheets.entity.TaskType">
+            <fetchPlan extends="_base"/>
+            <loader id="taskTypesDl" readOnly="true">
                 <query>
-                    <![CDATA[select e from ts_Project e]]>
+                    <![CDATA[select e from ts_TaskType e]]>
                 </query>
             </loader>
         </collection>
@@ -29,23 +27,23 @@
     </actions>
     <layout>
         <genericFilter id="genericFilter"
-                       dataLoader="projectsDl">
+                       dataLoader="taskTypesDl">
             <properties include=".*"/>
         </genericFilter>
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
-                <button id="createButton" action="projectsDataGrid.createAction"/>
-                <button id="editButton" action="projectsDataGrid.editAction"/>
-                <button id="removeButton" action="projectsDataGrid.removeAction"/>
+                <button id="createButton" action="taskTypesDataGrid.createAction"/>
+                <button id="editButton" action="taskTypesDataGrid.editAction"/>
+                <button id="removeButton" action="taskTypesDataGrid.removeAction"/>
             </startSlot>
             <endSlot>
-                <simplePagination id="pagination" dataLoader="projectsDl"/>
+                <simplePagination id="pagination" dataLoader="taskTypesDl"/>
             </endSlot>
         </hbox>
-        <dataGrid id="projectsDataGrid"
+        <dataGrid id="taskTypesDataGrid"
                   width="100%"
                   minHeight="20em"
-                  dataContainer="projectsDc"
+                  dataContainer="taskTypesDc"
                   columnReorderingAllowed="true">
             <actions>
                 <action id="createAction" type="list_create"/>
@@ -54,9 +52,7 @@
             </actions>
             <columns resizable="true">
                 <column property="name"/>
-                <column property="client"/>
                 <column property="description"/>
-                <column property="status"/>
             </columns>
         </dataGrid>
         <hbox id="lookupActions" visible="false">

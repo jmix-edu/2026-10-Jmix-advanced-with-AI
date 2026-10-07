@@ -1,0 +1,143 @@
+= 01_data_manipulation / 02 — Участники проекта: ProjectRole, ProjectParticipant
+:toc:
+:status: черновик, ждёт ревью
+
+== Цель
+
+Описать, кто работает в проекте и в какой роли: справочник ролей и
+ассоциативная сущность «пользователь в проекте с ролью», которая принадлежит
+проекту и удаляется вместе с ним.
+
+== В области
+
+* Перечисление `ProjectRoleType`.
+* Справочник `ProjectRole`.
+* Ассоциативная сущность `ProjectParticipant`.
+* Композиция `Project.participants` с каскадным удалением участников.
+* Подписи сущностей, атрибутов и констант перечисления в `messages_en.properties`.
+* List- и detail-вью `ProjectRole` и пункт меню. Их генерирует Studio.
+* Changelog Liquibase. Его генерирует Studio.
+
+== Вне области
+
+* Списания времени — следующая спека модуля 1.
+* Аудит и soft delete на новых сущностях.
+* Экраны, кроме справочника `ProjectRole`: участников через UI не добавить
+  до спеки экранов. Для ручной проверки — Entity Inspector (`jmix-datatools`
+  уже подключён).
+* Политики удаления по ссылкам на `User` и `ProjectRole`: удаление пользователя
+  или роли, у которых есть участия, отклоняет внешний ключ в базе.
+* Изменения `User`: обратной коллекции участий у пользователя нет.
+* Уникальность участия: один пользователь может входить в проект несколько раз,
+  в том числе с разными ролями. Ограничения на (`PROJECT_ID`, `USER_ID`) нет.
+* Роли и тесты.
+
+== Модель
+
+Пакет `com.company.timesheets.entity`. Соглашения как в предыдущих спеках:
+префиксы `ts_` / `TS_`, генерируемый `UUID`, `@Version`, аксессоры вручную,
+длинный текст — `@Lob`, длина строк по умолчанию 255.
+
+=== ProjectRoleType
+
+`EnumClass<String>` с `fromId()`; в сущности хранится строковый id.
+
+[cols="2,2",options="header"]
+|===
+| Константа | id
+
+| `MANAGER`  | `manager`
+| `APPROVER` | `approver`
+| `MEMBER`   | `member`
+| `OBSERVER` | `observer`
+|===
+
+=== ProjectRole
+
+Сущность `ts_ProjectRole`, таблица `TS_PROJECT_ROLE`.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `name`        | `String`          | `@InstanceName`, `nullable = false`, `@NotNull`
+| `type`        | `ProjectRoleType` | колонка `TYPE`, `nullable = false`, `@NotNull`; значения по умолчанию нет
+| `description` | `String`          | `@Lob`, длинный текст
+|===
+
+`TYPE` не зарезервировано в PostgreSQL.
+
+=== ProjectParticipant
+
+Сущность `ts_ProjectParticipant`, таблица `TS_PROJECT_PARTICIPANT`.
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `user`        | `User`        | `@ManyToOne(fetch = LAZY, optional = false)` *и* `@JoinColumn(name = "USER_ID", nullable = false)`, `@NotNull`
+| `project`     | `Project`     | то же, `@JoinColumn(name = "PROJECT_ID", nullable = false)`; `@OnDeleteInverse(DeletePolicy.CASCADE)`
+| `projectRole` | `ProjectRole` | то же, `@JoinColumn(name = "PROJECT_ROLE_ID", nullable = false)`
+|===
+
+* Поле называется `user`, колонка задана явно — `USER_ID`, так что
+  зарезервированное слово `USER` в схему не попадает.
+* Индексы по `USER_ID`, `PROJECT_ID`, `PROJECT_ROLE_ID` объявлены в
+  `@Table(indexes = ...)`, имена совпадают с changelog.
+* Имя экземпляра — метод с `@InstanceName` и `@DependsOnProperties({"user"})`,
+  возвращает имя экземпляра пользователя (`User.getDisplayName()`). Без
+  пользователя — `null`.
+
+=== Project — новый атрибут
+
+[cols="2,2,4",options="header"]
+|===
+| Атрибут | Тип | Ограничения
+
+| `participants` | `List<ProjectParticipant>` | `@Composition`, `@OnDelete(DeletePolicy.CASCADE)`, `@OneToMany(mappedBy = "project")`; поле не инициализируется
+|===
+
+=== Каскадное удаление участников
+
+Устроено так же, как у задач в `01-project-aggregate`: `@OnDelete(CASCADE)` на
+`Project.participants` и `@OnDeleteInverse(CASCADE)` на
+`ProjectParticipant.project`. У `Project` есть soft delete, поэтому каскад
+выполняет Jmix, а участники (без soft delete) удаляются физически. `ON DELETE
+CASCADE` в базе Studio, как и для задач, не сгенерирует.
+
+== Кто что делает
+
+. *Claude:* `ProjectRoleType`, `ProjectRole`, `ProjectParticipant`, изменения
+  `Project`, ключи сообщений.
+. *Вы, в Studio:* changelog по разнице модели и БД; list- и detail-вью
+  `ProjectRole` с пунктом меню.
+. *Claude, Review:* сверка changelog и вью со спекой.
+. *Claude, Verify:* Gate 1, Gate 2, чек-лист Gate 3.
+
+== Критерии приёмки
+
+Проверяет Claude (сверка с changelog, Gate 1 и 2):
+
+. Changelog создаёт `TS_PROJECT_ROLE` и `TS_PROJECT_PARTICIPANT`;
+  существующие таблицы не меняются.
+. `TS_PROJECT_ROLE.NAME`, `TS_PROJECT_ROLE.TYPE`, `USER_ID`, `PROJECT_ID`, `PROJECT_ROLE_ID` —
+  `NOT NULL`; `DESCRIPTION` — `CLOB`. Внешние ключи на `TS_USER`, `TS_PROJECT`,
+  `TS_PROJECT_ROLE` есть, индексы совпадают в `@Table` и changelog.
+  Уникальных ограничений на `TS_PROJECT_PARTICIPANT` нет.
+. id констант `ProjectRoleType` совпадают с таблицей выше, колонка `TYPE`
+  строковая.
+. `Project.participants` помечен `@Composition` и `@OnDelete(DeletePolicy.CASCADE)`,
+  поле не инициализируется; `ProjectParticipant.project` —
+  `@OnDeleteInverse(DeletePolicy.CASCADE)`.
+. Ключи сообщений есть для новых сущностей, атрибутов и констант перечисления.
+. `User` не изменён.
+. Gate 1 по каждому затронутому файлу и Gate 2 (`gradle clean test`) зелёные.
+
+Проверяете вы (чек-лист Gate 3, после перезапуска приложения):
+
+. Liquibase применяет changelog к `ts_live` без ошибок.
+. Справочник ролей: роль создаётся, в поле типа четыре значения, без имени
+  или типа не сохраняется.
+. В Entity Inspector участник проекта создаётся и в списке отображается
+  именем пользователя, а не UUID.
+. Удаление проекта с участником (из списка проектов) удаляет и участника.

@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
       xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
-      title="msg://projectListView.title"
-      focusComponent="projectsDataGrid">
+      title="msg://projectRoleListView.title"
+      focusComponent="projectRolesDataGrid">
     <data>
-        <collection id="projectsDc"
-                    class="com.company.timesheets.entity.Project">
-            <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
-            </fetchPlan>
-            <loader id="projectsDl" readOnly="true">
+        <collection id="projectRolesDc"
+                    class="com.company.timesheets.entity.ProjectRole">
+            <fetchPlan extends="_base"/>
+            <loader id="projectRolesDl" readOnly="true">
                 <query>
-                    <![CDATA[select e from ts_Project e]]>
+                    <![CDATA[select e from ts_ProjectRole e]]>
                 </query>
             </loader>
         </collection>
@@ -29,23 +27,23 @@
     </actions>
     <layout>
         <genericFilter id="genericFilter"
-                       dataLoader="projectsDl">
+                       dataLoader="projectRolesDl">
             <properties include=".*"/>
         </genericFilter>
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
-                <button id="createButton" action="projectsDataGrid.createAction"/>
-                <button id="editButton" action="projectsDataGrid.editAction"/>
-                <button id="removeButton" action="projectsDataGrid.removeAction"/>
+                <button id="createButton" action="projectRolesDataGrid.createAction"/>
+                <button id="editButton" action="projectRolesDataGrid.editAction"/>
+                <button id="removeButton" action="projectRolesDataGrid.removeAction"/>
             </startSlot>
             <endSlot>
-                <simplePagination id="pagination" dataLoader="projectsDl"/>
+                <simplePagination id="pagination" dataLoader="projectRolesDl"/>
             </endSlot>
         </hbox>
-        <dataGrid id="projectsDataGrid"
+        <dataGrid id="projectRolesDataGrid"
                   width="100%"
                   minHeight="20em"
-                  dataContainer="projectsDc"
+                  dataContainer="projectRolesDc"
                   columnReorderingAllowed="true">
             <actions>
                 <action id="createAction" type="list_create"/>
@@ -54,9 +52,8 @@
             </actions>
             <columns resizable="true">
                 <column property="name"/>
-                <column property="client"/>
+                <column property="type"/>
                 <column property="description"/>
-                <column property="status"/>
             </columns>
         </dataGrid>
         <hbox id="lookupActions" visible="false">
