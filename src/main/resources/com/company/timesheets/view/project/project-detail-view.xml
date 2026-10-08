@@ -6,11 +6,9 @@
         <instance id="projectDc"
                   class="com.company.timesheets.entity.Project">
             <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
-                <property name="participants" fetchPlan="_base">
-                    <property name="projectRole" fetchPlan="_instance_name"/>
-                </property>
+                <property name="client" fetchPlan="_base"/>
                 <property name="tasks" fetchPlan="_base"/>
+                <property name="participants" fetchPlan="_base"/>
             </fetchPlan>
             <loader id="projectDl"/>
             <collection id="participantsDc" property="participants"/>

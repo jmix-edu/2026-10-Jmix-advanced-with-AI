@@ -6,8 +6,12 @@
     <data>
         <collection id="tasksDc"
                     class="com.company.timesheets.entity.Task">
-            <fetchPlan extends="_base">
-                <property name="project" fetchPlan="_base"/>
+            <fetchPlan extends="_instance_name">
+                <property name="status"/>
+                <property name="createdBy"/>
+                <property name="createdDate"/>
+                <property name="lastModifiedBy"/>
+                <property name="lastModifiedDate"/>
             </fetchPlan>
             <loader id="tasksDl" readOnly="true">
                 <query>
