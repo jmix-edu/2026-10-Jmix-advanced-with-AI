@@ -2,26 +2,26 @@ package com.company.timesheets.listener;
 
 import com.company.timesheets.entity.Project;
 import com.company.timesheets.entity.ProjectStatus;
-import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.entity.TimeEntryStatus;
-import io.jmix.core.SaveContext;
+import io.jmix.core.Messages;
 import io.jmix.core.UnconstrainedDataManager;
 import io.jmix.core.event.EntityChangedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 /**
- * Closes the approved time entries of a project in the same transaction in which the project is closed.
+ * A project cannot be closed while it has approved time entries: they must be billed by closing their months
+ * first, otherwise that time would never reach billing.
  */
 @Component
 public class ProjectClosingListener {
 
     private final UnconstrainedDataManager dataManager;
+    private final Messages messages;
 
-    public ProjectClosingListener(UnconstrainedDataManager dataManager) {
+    public ProjectClosingListener(UnconstrainedDataManager dataManager, Messages messages) {
         this.dataManager = dataManager;
+        this.messages = messages;
     }
 
     @EventListener
@@ -34,19 +34,14 @@ public class ProjectClosingListener {
             return;
         }
 
-        List<TimeEntry> approved = dataManager.load(TimeEntry.class)
-                .query("select e from ts_TimeEntry e where e.task.project = :project and e.status = :approved")
+        long approved = dataManager.loadValue(
+                        "select count(e) from ts_TimeEntry e where e.task.project = :project and e.status = :approved",
+                        Long.class)
                 .parameter("project", project)
                 .parameter("approved", TimeEntryStatus.APPROVED)
-                .list();
-        if (approved.isEmpty()) {
-            return;
+                .one();
+        if (approved > 0) {
+            throw new TimeEntryRuleException(messages.getMessage(getClass(), "project.approvedEntriesNotBilled"));
         }
-        SaveContext saveContext = new SaveContext();
-        for (TimeEntry entry : approved) {
-            entry.setStatus(TimeEntryStatus.CLOSED);
-            saveContext.saving(entry);
-        }
-        dataManager.save(saveContext);
     }
 }

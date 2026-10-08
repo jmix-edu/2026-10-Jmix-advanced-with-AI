@@ -58,6 +58,13 @@ public class TimeEntry {
     @Column(name = "REJECTION_REASON")
     private String rejectionReason;
 
+    /**
+     * Billing record in the {@code reports} store that this entry was closed into. No foreign key:
+     * the record lives in another database. Set only by {@code MonthClosingService}.
+     */
+    @Column(name = "BILLING_RECORD_ID")
+    private UUID billingRecordId;
+
     @NotNull
     @OnDeleteInverse(DeletePolicy.CASCADE)
     @JoinColumn(name = "TASK_ID", nullable = false)
@@ -152,6 +159,14 @@ public class TimeEntry {
 
     public void setRejectionReason(final String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public UUID getBillingRecordId() {
+        return billingRecordId;
+    }
+
+    public void setBillingRecordId(final UUID billingRecordId) {
+        this.billingRecordId = billingRecordId;
     }
 
     public Task getTask() {

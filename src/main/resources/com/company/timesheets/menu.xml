@@ -10,6 +10,9 @@
         <item view="ts_ProjectRole.list"
               title="msg://com.company.timesheets.view.projectrole/projectRoleListView.title"/>
         <item view="ts_TimeEntry.list" title="msg://com.company.timesheets.view.timeentry/timeEntryListView.title"/>
+        <item view="ts_HoursReportView" title="msg://com.company.timesheets.view.hoursreport/hoursReportView.title"/>
+        <item view="ts_BillingRecord.list"
+              title="msg://com.company.timesheets.view.billingrecord/billingRecordListView.title"/>
     </menu>
 
 </menu-config>

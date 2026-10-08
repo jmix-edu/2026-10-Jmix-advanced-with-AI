@@ -11,9 +11,11 @@
     <property name="offsetDateTime.type" dbms="postgresql" value="timestamp with time zone"/>
     <property name="offsetDateTime.type" dbms="hsqldb" value="timestamp with time zone"/>
     <property name="byte[].type" dbms="hsqldb" value="longvarbinary"/>
+
     <include file="/io/jmix/data/liquibase/changelog.xml"/>
     <include file="/io/jmix/flowuidata/liquibase/changelog.xml"/>
     <include file="/io/jmix/securitydata/liquibase/changelog.xml"/>
+    <include file="/io/jmix/audit/liquibase/changelog.xml"/>
 
     <includeAll path="/com/company/timesheets/liquibase/changelog"/>
 

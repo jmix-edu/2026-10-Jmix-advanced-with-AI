@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://hoursReportView.title">
+    <data>
+        <keyValueCollection id="hoursDc">
+            <properties>
+                <property name="project" class="com.company.timesheets.entity.Project"/>
+                <property name="user" class="com.company.timesheets.entity.User"/>
+                <property name="totalTime" datatype="spentTime"/>
+                <property name="entryCount" datatype="long"/>
+            </properties>
+            <loader id="hoursDl"/>
+        </keyValueCollection>
+        <collection id="projectSummariesDc"
+                    class="com.company.timesheets.entity.ProjectSummary">
+            <loader id="projectSummariesDl" readOnly="true"/>
+        </collection>
+    </data>
+    <layout>
+        <hbox id="periodPanel" alignItems="BASELINE">
+            <datePicker id="fromField" label="msg://fromField.label" datatype="localDate"/>
+            <datePicker id="toField" label="msg://toField.label" datatype="localDate"/>
+            <button id="showButton" text="msg://showButton.text"/>
+        </hbox>
+        <h4 text="msg://hoursByProjectAndUser.header"/>
+        <dataGrid id="hoursDataGrid" dataContainer="hoursDc" width="100%" minHeight="15em">
+            <columns resizable="true">
+                <column property="project" header="msg://hoursDataGrid.project"/>
+                <column property="user" header="msg://hoursDataGrid.user"/>
+                <column property="totalTime" header="msg://hoursDataGrid.totalTime"/>
+                <column property="entryCount" header="msg://hoursDataGrid.entryCount"/>
+            </columns>
+        </dataGrid>
+        <h4 text="msg://projectSummaries.header"/>
+        <dataGrid id="projectSummariesDataGrid" dataContainer="projectSummariesDc" width="100%" minHeight="15em">
+            <columns resizable="true">
+                <column property="project"/>
+                <column property="client"/>
+                <column property="status"/>
+                <column property="totalTime"/>
+                <column property="currentMonthTime"/>
+                <column property="participantCount"/>
+            </columns>
+        </dataGrid>
+    </layout>
+</view>

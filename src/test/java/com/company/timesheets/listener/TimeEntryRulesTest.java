@@ -157,7 +157,7 @@ class TimeEntryRulesTest {
         User user = user();
 
         TimeEntry approved = setStatus(newEntry(task, user, DAY, 60), TimeEntryStatus.APPROVED);
-        assertThat(setStatus(approved, TimeEntryStatus.CLOSED).getStatus()).isEqualTo(TimeEntryStatus.CLOSED);
+        assertThat(closeApproved(approved).getStatus()).isEqualTo(TimeEntryStatus.CLOSED);
 
         TimeEntry rejected = reject(newEntry(task, user, DAY, 60));
         assertThat(setStatus(rejected, TimeEntryStatus.CLOSED).getStatus()).isEqualTo(TimeEntryStatus.CLOSED);
@@ -178,7 +178,7 @@ class TimeEntryRulesTest {
         assertTransitionRejected(rejected, TimeEntryStatus.NEW);
         assertTransitionRejected(rejected, TimeEntryStatus.APPROVED);
 
-        TimeEntry closed = setStatus(approved, TimeEntryStatus.CLOSED);
+        TimeEntry closed = closeApproved(approved);
         assertTransitionRejected(closed, TimeEntryStatus.APPROVED);
     }
 
@@ -208,13 +208,51 @@ class TimeEntryRulesTest {
     @Test
     void closedEntryCannotBeChangedOrDeleted() {
         TimeEntry entry = newEntry(task(project(), TaskStatus.ACTIVE), user(), DAY, 60);
-        TimeEntry closed = setStatus(setStatus(entry, TimeEntryStatus.APPROVED), TimeEntryStatus.CLOSED);
+        TimeEntry closed = closeApproved(setStatus(entry, TimeEntryStatus.APPROVED));
 
         closed.setDescription("changed");
         assertRuleViolation(() -> dataManager.save(closed));
 
         assertRuleViolation(() -> dataManager.remove(reload(entry)));
         assertThat(reload(entry).getDeletedDate()).isNull();
+    }
+
+    // --- billing (specs/01_data_manipulation/07-billing-store.spec.adoc) ---
+
+    @Test
+    void approvedEntryIsClosedOnlyWithBillingRecord() {
+        TimeEntry approved = setStatus(newEntry(task(project(), TaskStatus.ACTIVE), user(), DAY, 60),
+                TimeEntryStatus.APPROVED);
+
+        assertTransitionRejected(approved, TimeEntryStatus.CLOSED);
+        assertThat(reload(approved).getStatus()).isEqualTo(TimeEntryStatus.APPROVED);
+    }
+
+    @Test
+    void billingRecordIsSetOnlyWhenClosingApproved() {
+        Task task = task(project(), TaskStatus.ACTIVE);
+        User user = user();
+
+        TimeEntry created = entry(task, user, DAY, 60);
+        created.setBillingRecordId(UUID.randomUUID());
+        assertRuleViolation(() -> dataManager.save(created));
+
+        TimeEntry fresh = newEntry(task, user, DAY, 60);
+        fresh.setBillingRecordId(UUID.randomUUID());
+        assertRuleViolation(() -> dataManager.save(fresh));
+
+        TimeEntry approved = setStatus(newEntry(task, user, DAY, 60), TimeEntryStatus.APPROVED);
+        approved.setBillingRecordId(UUID.randomUUID());
+        assertRuleViolation(() -> dataManager.save(approved));
+
+        TimeEntry rejected = reject(newEntry(task, user, DAY, 60));
+        rejected.setStatus(TimeEntryStatus.CLOSED);
+        rejected.setBillingRecordId(UUID.randomUUID());
+        assertRuleViolation(() -> dataManager.save(rejected));
+
+        TimeEntry closed = closeApproved(setStatus(newEntry(task, user, DAY, 60), TimeEntryStatus.APPROVED));
+        closed.setBillingRecordId(UUID.randomUUID());
+        assertRuleViolation(() -> dataManager.save(closed));
     }
 
     @Test
@@ -228,11 +266,24 @@ class TimeEntryRulesTest {
     // --- П4: closing a project ---
 
     @Test
-    void closingProjectClosesApprovedEntriesOnly() {
+    void projectWithApprovedEntriesCannotBeClosed() {
+        Project project = project();
+        TimeEntry approved = setStatus(newEntry(task(project, TaskStatus.ACTIVE), user(), DAY, 60),
+                TimeEntryStatus.APPROVED);
+
+        assertRuleViolation(() -> close(project));
+
+        assertThat(dataManager.load(Project.class).id(project.getId()).one().getStatus())
+                .isEqualTo(ProjectStatus.OPEN);
+        assertThat(reload(approved).getStatus()).isEqualTo(TimeEntryStatus.APPROVED);
+    }
+
+    @Test
+    void closingProjectLeavesOtherEntriesAsTheyAre() {
         Project project = project();
         Task task = task(project, TaskStatus.ACTIVE);
         User user = user();
-        TimeEntry approved = setStatus(newEntry(task, user, DAY, 60), TimeEntryStatus.APPROVED);
+        TimeEntry closed = closeApproved(setStatus(newEntry(task, user, DAY, 60), TimeEntryStatus.APPROVED));
         TimeEntry fresh = newEntry(task, user, DAY, 60);
         TimeEntry rejected = reject(newEntry(task, user, DAY, 60));
         TimeEntry otherProject = setStatus(newEntry(task(project(), TaskStatus.ACTIVE), user, DAY, 60),
@@ -240,7 +291,7 @@ class TimeEntryRulesTest {
 
         close(project);
 
-        assertThat(reload(approved).getStatus()).isEqualTo(TimeEntryStatus.CLOSED);
+        assertThat(reload(closed).getStatus()).isEqualTo(TimeEntryStatus.CLOSED);
         assertThat(reload(fresh).getStatus()).isEqualTo(TimeEntryStatus.NEW);
         assertThat(reload(rejected).getStatus()).isEqualTo(TimeEntryStatus.REJECTED);
         assertThat(reload(otherProject).getStatus()).isEqualTo(TimeEntryStatus.APPROVED);
@@ -252,7 +303,7 @@ class TimeEntryRulesTest {
     void projectWithClosedEntryCannotBeDeleted() {
         Project project = project();
         Task task = task(project, TaskStatus.ACTIVE);
-        setStatus(setStatus(newEntry(task, user(), DAY, 60), TimeEntryStatus.APPROVED), TimeEntryStatus.CLOSED);
+        closeApproved(setStatus(newEntry(task, user(), DAY, 60), TimeEntryStatus.APPROVED));
 
         assertRuleViolation(() -> dataManager.remove(dataManager.load(Project.class).id(project.getId()).one()));
 
@@ -263,7 +314,7 @@ class TimeEntryRulesTest {
     @Test
     void taskWithClosedEntryCannotBeDeleted() {
         Task task = task(project(), TaskStatus.ACTIVE);
-        setStatus(setStatus(newEntry(task, user(), DAY, 60), TimeEntryStatus.APPROVED), TimeEntryStatus.CLOSED);
+        closeApproved(setStatus(newEntry(task, user(), DAY, 60), TimeEntryStatus.APPROVED));
 
         assertRuleViolation(() -> dataManager.remove(dataManager.load(Task.class).id(task.getId()).one()));
         assertThat(loadIncludingDeleted(task).getDeletedDate()).isNull();
@@ -329,12 +380,22 @@ class TimeEntryRulesTest {
     private void close(Project project) {
         Project loaded = dataManager.load(Project.class).id(project.getId()).one();
         loaded.setStatus(ProjectStatus.CLOSED);
-        dataManager.save(loaded);
+        dataManager.saveWithoutReload(loaded);
     }
 
     private TimeEntry setStatus(TimeEntry entry, TimeEntryStatus status) {
         TimeEntry loaded = reload(entry);
         loaded.setStatus(status);
+        return dataManager.save(loaded);
+    }
+
+    /**
+     * Closes an approved entry the way MonthClosingService does: together with a billing record id.
+     */
+    private TimeEntry closeApproved(TimeEntry entry) {
+        TimeEntry loaded = reload(entry);
+        loaded.setStatus(TimeEntryStatus.CLOSED);
+        loaded.setBillingRecordId(UUID.randomUUID());
         return dataManager.save(loaded);
     }
 
@@ -373,7 +434,7 @@ class TimeEntryRulesTest {
         }
         assertThat(cause).as("cause chain of %s", thrown).isInstanceOf(TimeEntryRuleException.class);
         // Messages returns the bare key when it is missing from the bundle.
-        assertThat(cause.getMessage()).doesNotStartWith("timeEntry.");
+        assertThat(cause.getMessage()).doesNotStartWith("timeEntry.").doesNotStartWith("project.");
     }
 
     @AfterEach

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS"
+        logicalFilePath="com/company/timesheets/liquibase/reports-changelog/2026/10/08-135423-f7f1fbcf.xml">
+    <changeSet id="1" author="ts">
+        <createTable tableName="TS_BILLING_RECORD">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_TS_BILLING_RECORD"/>
+            </column>
+            <column name="VERSION" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_NAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USERNAME" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MONTH_" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SPENT_TIME" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CLOSED_DATE" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="ts">
+        <createIndex indexName="IDX_TS_BILLING_RECORD_UNQ" tableName="TS_BILLING_RECORD" unique="true">
+            <column name="PROJECT_ID"/>
+            <column name="USER_ID"/>
+            <column name="MONTH_"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

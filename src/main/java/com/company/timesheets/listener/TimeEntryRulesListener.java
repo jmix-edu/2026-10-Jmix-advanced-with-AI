@@ -77,6 +77,9 @@ public class TimeEntryRulesListener {
         if (entry.getStatus() != TimeEntryStatus.NEW) {
             throw violation("timeEntry.createdNotNew");
         }
+        if (entry.getBillingRecordId() != null) {
+            throw violation("timeEntry.billingRecordOnlyOnClosing");
+        }
         checkTaskOpen(entry.getTask());
         checkSpentTime(entry);
     }
@@ -95,6 +98,14 @@ public class TimeEntryRulesListener {
         if (statusChanged && newStatus == TimeEntryStatus.REJECTED
                 && (entry.getRejectionReason() == null || entry.getRejectionReason().isBlank())) {
             throw violation("timeEntry.rejectionReasonRequired");
+        }
+        // Approved time is closed only into a billing record (MonthClosingService), so none of it is lost.
+        boolean closingApproved = statusChanged && oldStatus == TimeEntryStatus.APPROVED;
+        if (closingApproved && entry.getBillingRecordId() == null) {
+            throw violation("timeEntry.closeApprovedThroughBilling");
+        }
+        if (changes.isChanged("billingRecordId") && !closingApproved) {
+            throw violation("timeEntry.billingRecordOnlyOnClosing");
         }
 
         boolean rejectionReasonEdited = changes.isChanged("rejectionReason")
