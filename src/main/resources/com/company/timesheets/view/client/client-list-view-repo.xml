@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
       xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
-      title="msg://taskListView.title"
-      focusComponent="tasksDataGrid">
+      title="msg://clientListViewRepo.title"
+      focusComponent="clientsDataGrid">
     <data>
-        <collection id="tasksDc"
-                    class="com.company.timesheets.entity.Task">
-            <fetchPlan extends="_base">
-            </fetchPlan>
-            <loader id="tasksDl" readOnly="true">
-                <query>
-                    <![CDATA[select e from ts_Task e]]>
-                </query>
-            </loader>
+        <collection id="clientsDc"
+                    class="com.company.timesheets.entity.Client">
+            <fetchPlan extends="_base"/>
+            <loader id="clientsDl" readOnly="true" cacheable="true"/>
         </collection>
     </data>
     <facets>
@@ -28,23 +23,23 @@
     </actions>
     <layout>
         <genericFilter id="genericFilter"
-                       dataLoader="tasksDl">
+                       dataLoader="clientsDl">
             <properties include=".*"/>
         </genericFilter>
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
-                <button id="createButton" action="tasksDataGrid.createAction"/>
-                <button id="editButton" action="tasksDataGrid.editAction"/>
-                <button id="removeButton" action="tasksDataGrid.removeAction"/>
+                <button id="createButton" action="clientsDataGrid.createAction"/>
+                <button id="editButton" action="clientsDataGrid.editAction"/>
+                <button id="removeButton" action="clientsDataGrid.removeAction"/>
             </startSlot>
             <endSlot>
-                <simplePagination id="pagination" dataLoader="tasksDl"/>
+                <simplePagination id="pagination" dataLoader="clientsDl"/>
             </endSlot>
         </hbox>
-        <dataGrid id="tasksDataGrid"
+        <dataGrid id="clientsDataGrid"
                   width="100%"
                   minHeight="20em"
-                  dataContainer="tasksDc"
+                  dataContainer="clientsDc"
                   columnReorderingAllowed="true">
             <actions>
                 <action id="createAction" type="list_create"/>
@@ -53,9 +48,10 @@
             </actions>
             <columns resizable="true">
                 <column property="name"/>
-                <column property="project"/>
-                <column property="status"/>
-                <column property="description"/>
+                <column property="contactInformation.email"/>
+                <column property="contactInformation.phone"/>
+                <column property="contactInformation.address"/>
+                <column property="contactInformation.url"/>
             </columns>
         </dataGrid>
         <hbox id="lookupActions" visible="false">

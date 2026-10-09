@@ -10,8 +10,12 @@ import io.jmix.core.DataManager;
 import io.jmix.core.EntitySet;
 import io.jmix.core.FetchPlan;
 import io.jmix.core.SaveContext;
+import io.jmix.pessimisticlock.LockManager;
+import io.jmix.pessimisticlock.entity.LockInfo;
+import io.jmix.pessimisticlock.entity.LockNotSupported;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -32,25 +36,55 @@ import java.util.stream.Collectors;
  * optimistic locks fire on save), billing records are committed next, and the main transaction commits last.
  * If that last commit fails, the billing record is left ahead of the entries; running the operation again fixes
  * it, because a record's time is always recalculated from the entries linked to it, never accumulated.
+ * <p>
+ * Closings of one project run one at a time: a pessimistic lock on the project is held from before the main
+ * transaction starts until after it commits, so the next closing sees the entries already closed.
  */
 @Service
 public class MonthClosingService {
 
-    private final DataManager dataManager;
+    /**
+     * Pessimistic lock name; the lock id is the project id.
+     */
+    public static final String LOCK_NAME = "ts_MonthClosing";
 
-    public MonthClosingService(DataManager dataManager) {
+    private final DataManager dataManager;
+    private final LockManager lockManager;
+    private final TransactionTemplate transaction;
+
+    public MonthClosingService(DataManager dataManager, LockManager lockManager,
+                               PlatformTransactionManager transactionManager) {
         this.dataManager = dataManager;
+        this.lockManager = lockManager;
+        this.transaction = new TransactionTemplate(transactionManager);
     }
 
     /**
      * Bills the project's approved entries dated within the month and returns the month's records of the project,
      * one per user, ordered by username. Only past months can be closed.
+     *
+     * @throws MonthClosingLockedException if a closing of the same project is already running
      */
-    @Transactional
     public List<BillingRecord> closeMonth(UUID projectId, YearMonth month) {
         if (projectId == null || month == null || !month.isBefore(YearMonth.now())) {
             throw new IllegalArgumentException("Only a past month can be closed: " + month);
         }
+        String lockId = projectId.toString();
+        LockInfo holder = lockManager.lock(LOCK_NAME, lockId);
+        if (holder instanceof LockNotSupported) {
+            throw new IllegalStateException("No lock descriptor for " + LOCK_NAME);
+        }
+        if (holder != null) {
+            throw new MonthClosingLockedException(holder.getUsername(), holder.getSince());
+        }
+        try {
+            return transaction.execute(status -> closeLocked(projectId, month));
+        } finally {
+            lockManager.unlock(LOCK_NAME, lockId);
+        }
+    }
+
+    private List<BillingRecord> closeLocked(UUID projectId, YearMonth month) {
         LocalDate firstDay = month.atDay(1);
         Project project = dataManager.load(Project.class).id(projectId).one();
 

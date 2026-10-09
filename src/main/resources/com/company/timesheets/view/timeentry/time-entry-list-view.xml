@@ -7,7 +7,10 @@
         <collection id="timeEntriesDc"
                     class="com.company.timesheets.entity.TimeEntry">
             <fetchPlan extends="_base">
-                <property name="user" fetchPlan="_base"/>
+                <property name="task" fetchPlan="_instance_name">
+                    <property name="project" fetchPlan="_instance_name"/>
+                </property>
+                <property name="user" fetchPlan="_instance_name"/>
             </fetchPlan>
             <loader id="timeEntriesDl" readOnly="true">
                 <query>
@@ -31,6 +34,33 @@
         <genericFilter id="genericFilter"
                        dataLoader="timeEntriesDl">
             <properties include=".*"/>
+            <!-- Dates come from JPQL macros evaluated at load time, not from Java code. -->
+            <configurations>
+                <configuration id="myLastWeek" name="msg://filter.myLastWeek">
+                    <jpqlFilter id="myLastWeekFilter" parameterName="myLastWeek"
+                                parameterClass="java.lang.Void" defaultValue="true" visible="false">
+                        <condition>
+                            <c:jpql>
+                                <c:where>{E}.user.id = :current_user_id and @between({E}.date, now-6, now+1, day)</c:where>
+                            </c:jpql>
+                        </condition>
+                    </jpqlFilter>
+                </configuration>
+                <configuration id="lastMonth" name="msg://filter.lastMonth">
+                    <jpqlFilter id="lastMonthFilter" parameterName="lastMonth"
+                                parameterClass="java.lang.Void" defaultValue="true" visible="false">
+                        <condition>
+                            <c:jpql>
+                                <c:where>@between({E}.date, now-1, now, month)</c:where>
+                            </c:jpql>
+                        </condition>
+                    </jpqlFilter>
+                </configuration>
+                <configuration id="byStatus" name="msg://filter.byStatus">
+                    <propertyFilter id="statusFilter" property="status" operation="EQUAL"
+                                    operationEditable="false"/>
+                </configuration>
+            </configurations>
         </genericFilter>
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
@@ -59,6 +89,7 @@
                 <column property="description"/>
                 <column property="rejectionReason"/>
                 <column property="task"/>
+                <column property="task.project"/>
                 <column property="user"/>
             </columns>
         </dataGrid>

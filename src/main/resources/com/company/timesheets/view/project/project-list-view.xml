@@ -7,11 +7,17 @@
         <collection id="projectsDc"
                     class="com.company.timesheets.entity.Project">
             <fetchPlan extends="_base">
-                <property name="client" fetchPlan="_instance_name"/>
+                <property name="client" fetchPlan="_base"/>
             </fetchPlan>
             <loader id="projectsDl" readOnly="true">
                 <query>
                     <![CDATA[select e from ts_Project e]]>
+                    <condition>
+                        <c:jpql>
+                            <c:where>:onlyMine = true and exists (select p from ts_ProjectParticipant p
+                                where p.project = {E} and p.user.id = :current_user_id)</c:where>
+                        </c:jpql>
+                    </condition>
                 </query>
             </loader>
         </collection>
@@ -42,6 +48,7 @@
                 <button id="editButton" action="projectsDataGrid.editAction"/>
                 <button id="removeButton" action="projectsDataGrid.removeAction"/>
                 <button id="closeMonthButton" action="projectsDataGrid.closeMonthAction"/>
+                <checkbox id="onlyMyProjectsField" label="msg://onlyMyProjectsField.label"/>
             </startSlot>
             <endSlot>
                 <simplePagination id="pagination" dataLoader="projectsDl"/>

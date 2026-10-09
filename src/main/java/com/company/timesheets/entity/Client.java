@@ -6,6 +6,7 @@ import io.jmix.core.entity.annotation.EmbeddedParameters;
 import io.jmix.core.entity.annotation.JmixGeneratedValue;
 import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
+import io.jmix.pessimisticlock.annotation.PessimisticLock;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.CreatedBy;
@@ -16,6 +17,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@PessimisticLock(timeoutSec = 600)
 @JmixEntity
 @Entity(name = "ts_Client")
 @Table(name = "TS_CLIENT")

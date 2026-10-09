@@ -13,6 +13,7 @@
         <item view="ts_HoursReportView" title="msg://com.company.timesheets.view.hoursreport/hoursReportView.title"/>
         <item view="ts_BillingRecord.list"
               title="msg://com.company.timesheets.view.billingrecord/billingRecordListView.title"/>
+        <item view="ts_Client.list-repo" title="msg://com.company.timesheets.view.client/clientListViewRepo.title"/>
     </menu>
 
 </menu-config>

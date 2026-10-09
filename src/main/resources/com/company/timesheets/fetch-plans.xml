@@ -1,0 +1,8 @@
+<fetchPlans xmlns="http://jmix.io/schema/core/fetch-plans">
+    <fetchPlan entity="ts_Project" name="project-minimal-fetch-plan">
+        <property name="createdBy"/>
+        <property name="createdDate"/>
+        <property name="lastModifiedBy"/>
+        <property name="lastModifiedDate"/>
+    </fetchPlan>
+</fetchPlans>

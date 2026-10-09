@@ -5,13 +5,16 @@ import com.company.timesheets.entity.BillingRecord;
 import com.company.timesheets.entity.Client;
 import com.company.timesheets.entity.ContactInformation;
 import com.company.timesheets.entity.Project;
+import com.company.timesheets.entity.ProjectStatus;
 import com.company.timesheets.entity.Task;
 import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.entity.User;
+import com.company.timesheets.listener.TimeEntryRuleException;
 import com.company.timesheets.test_support.AuthenticatedAsAdmin;
 import io.jmix.core.DataManager;
 import io.jmix.core.event.EntitySavingEvent;
+import io.jmix.core.security.SystemAuthenticator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +33,12 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,16 +46,19 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
  * Month closing from specs/01_data_manipulation/07-billing-store.spec.adoc: approved time goes into the reports
- * store, entries become CLOSED, a repeat converges instead of duplicating.
+ * store, entries become CLOSED, a repeat converges instead of duplicating. The period lock from
+ * specs/01_data_manipulation/08-queries-locking.spec.adoc: one closing per project at a time.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
 @ActiveProfiles("test")
-@Import(MonthClosingServiceTest.FailingReportsStore.class)
+@Import(MonthClosingServiceTest.ReportsStoreHook.class)
 class MonthClosingServiceTest {
 
     private static final YearMonth MONTH = YearMonth.of(2003, 4);
     private static final LocalDate DAY = MONTH.atDay(10);
+    private static final String ADMIN = "admin";
+    private static final long WAIT_SECONDS = 30;
 
     @Autowired
     private MonthClosingService monthClosingService;
@@ -62,7 +74,12 @@ class MonthClosingServiceTest {
     private DataSource reportsDataSource;
 
     @Autowired
-    private FailingReportsStore failingReportsStore;
+    private ReportsStoreHook reportsStoreHook;
+
+    @Autowired
+    private SystemAuthenticator systemAuthenticator;
+
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private final List<UUID> userIds = new ArrayList<>();
     private final List<UUID> clientIds = new ArrayList<>();
@@ -146,7 +163,7 @@ class MonthClosingServiceTest {
         Task task = task(project);
         TimeEntry entry = approved(task, user(), DAY, 60);
 
-        failingReportsStore.failing = true;
+        reportsStoreHook.failing = true;
         try {
             Throwable thrown = catchThrowable(() -> monthClosingService.closeMonth(project.getId(), MONTH));
             assertThat(thrown).isNotNull();
@@ -154,9 +171,9 @@ class MonthClosingServiceTest {
             for (Throwable cause = thrown; cause != null; cause = cause.getCause()) {
                 messages.add(cause.getMessage());
             }
-            assertThat(messages).contains(FailingReportsStore.MESSAGE);
+            assertThat(messages).contains(ReportsStoreHook.MESSAGE);
         } finally {
-            failingReportsStore.failing = false;
+            reportsStoreHook.failing = false;
         }
 
         assertUntouched(entry, TimeEntryStatus.APPROVED);
@@ -201,7 +218,111 @@ class MonthClosingServiceTest {
         assertThat(storedRecords(project)).isEmpty();
     }
 
+    @Test
+    void secondClosingOfTheSameProjectIsRefusedWhileTheFirstRuns() throws Exception {
+        Project project = project();
+        TimeEntry entry = approved(task(project), user(), DAY, 60);
+
+        reportsStoreHook.pauseNextSave();
+        try {
+            Future<List<BillingRecord>> first = closeInBackground(project);
+            reportsStoreHook.awaitPaused();
+
+            assertThatThrownBy(() -> monthClosingService.closeMonth(project.getId(), MONTH))
+                    .isInstanceOfSatisfying(MonthClosingLockedException.class, e -> {
+                        assertThat(e.getUsername()).isEqualTo(ADMIN);
+                        assertThat(e.getSince()).isNotNull();
+                    });
+
+            reportsStoreHook.resume();
+            assertThat(first.get(WAIT_SECONDS, TimeUnit.SECONDS)).hasSize(1);
+        } finally {
+            reportsStoreHook.resume();
+        }
+
+        List<BillingRecord> stored = storedRecords(project);
+        assertThat(stored).hasSize(1);
+        assertClosedInto(entry, stored.getFirst());
+        // The lock is gone after the first closing committed.
+        assertThat(monthClosingService.closeMonth(project.getId(), MONTH)).hasSize(1);
+    }
+
+    @Test
+    void closingAnotherProjectIsNotBlocked() throws Exception {
+        Project locked = project();
+        approved(task(locked), user(), DAY, 60);
+        Project other = project();
+        TimeEntry otherEntry = approved(task(other), user(), DAY, 30);
+
+        reportsStoreHook.pauseNextSave();
+        try {
+            Future<List<BillingRecord>> first = closeInBackground(locked);
+            reportsStoreHook.awaitPaused();
+
+            assertThat(monthClosingService.closeMonth(other.getId(), MONTH)).hasSize(1);
+            assertClosedInto(otherEntry, storedRecords(other).getFirst());
+
+            reportsStoreHook.resume();
+            assertThat(first.get(WAIT_SECONDS, TimeUnit.SECONDS)).hasSize(1);
+        } finally {
+            reportsStoreHook.resume();
+        }
+    }
+
+    @Test
+    void projectCannotBeClosedWhileItsMonthIsBeingClosed() throws Exception {
+        Project project = project();
+        approved(task(project), user(), DAY, 60);
+
+        reportsStoreHook.pauseNextSave();
+        try {
+            Future<List<BillingRecord>> first = closeInBackground(project);
+            reportsStoreHook.awaitPaused();
+
+            Project closing = dataManager.load(Project.class).id(project.getId()).one();
+            closing.setStatus(ProjectStatus.CLOSED);
+            Throwable thrown = catchThrowable(() -> dataManager.saveWithoutReload(closing));
+            assertThat(causes(thrown)).anyMatch(TimeEntryRuleException.class::isInstance);
+
+            reportsStoreHook.resume();
+            first.get(WAIT_SECONDS, TimeUnit.SECONDS);
+        } finally {
+            reportsStoreHook.resume();
+        }
+        assertThat(dataManager.load(Project.class).id(project.getId()).one().getStatus())
+                .isEqualTo(ProjectStatus.OPEN);
+    }
+
+    @Test
+    void lockIsReleasedAfterAFailedClosing() {
+        Project project = project();
+        TimeEntry entry = approved(task(project), user(), DAY, 60);
+        reportsStoreHook.failing = true;
+        try {
+            assertThat(catchThrowable(() -> monthClosingService.closeMonth(project.getId(), MONTH))).isNotNull();
+        } finally {
+            reportsStoreHook.failing = false;
+        }
+
+        monthClosingService.closeMonth(project.getId(), MONTH);
+
+        assertClosedInto(entry, storedRecords(project).getFirst());
+    }
+
     // --- helpers ---
+
+    private static List<Throwable> causes(Throwable thrown) {
+        List<Throwable> causes = new ArrayList<>();
+        for (Throwable cause = thrown; cause != null; cause = cause.getCause()) {
+            causes.add(cause);
+        }
+        return causes;
+    }
+
+    private Future<List<BillingRecord>> closeInBackground(Project project) {
+        return executor.submit(() -> systemAuthenticator.withUser(ADMIN,
+                () -> monthClosingService.closeMonth(project.getId(), MONTH)));
+    }
 
     private void assertClosedInto(TimeEntry entry, BillingRecord record) {
         TimeEntry loaded = reload(entry);
@@ -283,6 +404,7 @@ class MonthClosingServiceTest {
 
     @AfterEach
     void tearDown() {
+        executor.shutdownNow();
         JdbcTemplate reports = new JdbcTemplate(reportsDataSource);
         for (UUID projectId : projectIds) {
             reports.update("delete from TS_BILLING_RECORD where PROJECT_ID = ?", projectId);
@@ -307,19 +429,45 @@ class MonthClosingServiceTest {
     }
 
     /**
-     * Makes saving a billing record fail on demand, standing in for an unavailable reports database.
+     * Makes saving a billing record fail on demand, standing in for an unavailable reports database, or holds
+     * the next save until released, keeping a closing in progress with its lock taken.
      */
     @TestConfiguration
-    static class FailingReportsStore {
+    static class ReportsStoreHook {
 
         static final String MESSAGE = "reports store is down (test)";
 
         volatile boolean failing;
 
+        private final AtomicBoolean pauseNext = new AtomicBoolean();
+        private volatile CountDownLatch paused = new CountDownLatch(0);
+        private volatile CountDownLatch resumed = new CountDownLatch(0);
+
+        void pauseNextSave() {
+            paused = new CountDownLatch(1);
+            resumed = new CountDownLatch(1);
+            pauseNext.set(true);
+        }
+
+        void awaitPaused() throws InterruptedException {
+            assertThat(paused.await(WAIT_SECONDS, TimeUnit.SECONDS)).as("closing reached the reports store").isTrue();
+        }
+
+        void resume() {
+            pauseNext.set(false);
+            resumed.countDown();
+        }
+
         @EventListener
-        public void onBillingRecordSaving(EntitySavingEvent<BillingRecord> event) {
+        public void onBillingRecordSaving(EntitySavingEvent<BillingRecord> event) throws InterruptedException {
             if (failing) {
                 throw new IllegalStateException(MESSAGE);
+            }
+            if (pauseNext.compareAndSet(true, false)) {
+                paused.countDown();
+                if (!resumed.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("the test did not resume the closing");
+                }
             }
         }
     }
