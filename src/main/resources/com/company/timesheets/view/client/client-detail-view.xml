@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
-      title="msg://clientDetailView.title"
-      focusComponent="form">
+      title="msg://clientDetailView.title">
     <data>
         <instance id="clientDc"
                   class="com.company.timesheets.entity.Client">
@@ -17,18 +16,28 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <formLayout id="form" dataContainer="clientDc">
-            <responsiveSteps>
-                <responsiveStep minWidth="0" columns="1"/>
-                <responsiveStep minWidth="40em" columns="2"/>
-            </responsiveSteps>
-            <textField id="nameField" property="name"/>
-            <fileUploadField id="imageField" clearButtonVisible="true" fileNameVisible="true" property="image"/>
-            <textField id="contactInformationEmailField" property="contactInformation.email"/>
-            <textField id="contactInformationPhoneField" property="contactInformation.phone"/>
-            <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address"/>
-            <textField id="contactInformationUrlField" property="contactInformation.url"/>
-        </formLayout>
+        <hbox>
+            <textField id="nameField"
+                       dataContainer="clientDc" property="name" label="msg://com.company.timesheets.entity/Client.name"/>
+            <fileUploadField id="imageField"
+                             clearButtonVisible="true"
+                             fileNameVisible="true"
+                             property="image"
+                             dataContainer="clientDc" label="msg://com.company.timesheets.entity/Client.image"/>
+        </hbox>
+
+        <details width="100%"
+                 summaryText="msg://com.company.timesheets.entity/Client.contactInformation" opened="true">
+            <formLayout dataContainer="clientDc">
+                <responsiveSteps>
+                    <responsiveStep minWidth="0" columns="3"/>
+                </responsiveSteps>
+                <textField id="contactInformationUrlField" property="contactInformation.url"/>
+                <textField id="contactInformationPhoneField" property="contactInformation.phone"/>
+                <textField id="contactInformationEmailField" property="contactInformation.email"/>
+                <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address" colspan="3"/>
+            </formLayout>
+        </details>
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>
             <button id="closeButton" action="closeAction"/>
