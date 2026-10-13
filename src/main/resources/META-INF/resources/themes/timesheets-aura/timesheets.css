@@ -1,1 +1,7 @@
 /* Define your styles here */
+
+.image-wrapper {
+    border: 1px solid var(--vaadin-border-color);
+    border-radius: var(--vaadin-radius-m);
+    padding: var(--vaadin-padding-s);
+}

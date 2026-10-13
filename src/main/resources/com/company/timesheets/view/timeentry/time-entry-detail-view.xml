@@ -7,9 +7,23 @@
                   class="com.company.timesheets.entity.TimeEntry">
             <fetchPlan extends="_base">
                 <property name="user" fetchPlan="_base"/>
+                <property name="task" fetchPlan="_base"/>
             </fetchPlan>
             <loader id="timeEntryDl"/>
         </instance>
+        <collection id="tasksDc" class="com.company.timesheets.entity.Task">
+            <fetchPlan extends="_base"/>
+            <loader id="tasksDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_Task e
+                     where e.project.status = @enum(com.company.timesheets.entity.ProjectStatus.OPEN)
+                       and e.status = @enum(com.company.timesheets.entity.TaskStatus.ACTIVE)
+                       and exists (select pp from ts_ProjectParticipant pp
+                                   where pp.project = e.project and pp.user.username = :username)
+                     order by e.project.name asc, e.name asc]]>
+                </query>
+            </loader>
+        </collection>
     </data>
     <facets>
         <dataLoadCoordinator auto="true"/>
@@ -24,23 +38,50 @@
                 <responsiveStep minWidth="0" columns="1"/>
                 <responsiveStep minWidth="40em" columns="2"/>
             </responsiveSteps>
-            <datePicker id="dateField" property="date"/>
-            <textField id="spentTimeField" property="spentTime"/>
-            <select id="statusField" property="status"/>
-            <textArea id="descriptionField" height="9.5em" property="description"/>
-            <textArea id="rejectionReasonField" height="9.5em" property="rejectionReason"/>
-            <entityPicker id="taskField" property="task">
-                <actions>
-                    <action id="entityLookupAction" type="entity_lookup"/>
-                    <action id="entityClearAction" type="entity_clear"/>
-                </actions>
-            </entityPicker>
+            <datePicker id="dateField" property="date">
+                <prefix>
+                    <icon icon="CALENDAR"/>
+                </prefix>
+            </datePicker>
             <entityPicker id="userField" property="user">
+                <prefix>
+                    <icon icon="USER"/>
+                </prefix>
                 <actions>
+                    <action id="assignSelf" icon="USER_CHECK" description="msg://assignSelf.description"/>
                     <action id="entityLookupAction" type="entity_lookup"/>
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
             </entityPicker>
+            <entityComboBox id="tasksComboBox" property="task" itemsContainer="tasksDc" dataContainer="timeEntryDc">
+                <prefix>
+                    <icon icon="FILE_TEXT_O"/>
+                </prefix>
+                <actions>
+                    <action id="entityLookupAction" type="entity_lookup"/>
+                    <action id="entityClearAction" type="entity_clear"/>
+                </actions>
+            </entityComboBox>
+            <textField id="spentTimeField" property="spentTime" placeholder="msg://spentTimeField.placeholder">
+                <prefix>
+                    <icon icon="CLOCK"/>
+                </prefix>
+            </textField>
+            <select id="statusField" property="status"/>
+            <textArea id="descriptionField" height="9.5em" property="description" colspan="2">
+                <prefix>
+                    <icon icon="COMMENT_O"/>
+                </prefix>
+            </textArea>
+            <textArea id="rejectionReasonField"
+                      height="9.5em"
+                      property="rejectionReason"
+                      required="true"
+                      colspan="2">
+                <prefix>
+                    <icon icon="EXCLAMATION_CIRCLE_O"/>
+                </prefix>
+            </textArea>
         </formLayout>
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>

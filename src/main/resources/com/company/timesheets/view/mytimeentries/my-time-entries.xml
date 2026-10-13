@@ -21,6 +21,7 @@
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
                 <button id="createButton" action="timeEntriesDataGrid.create"/>
+                <button id="copyButton" action="timeEntriesDataGrid.copy"/>
                 <button id="editButton" action="timeEntriesDataGrid.edit"/>
                 <button id="removeButton" action="timeEntriesDataGrid.remove"/>
             </startSlot>
@@ -34,6 +35,7 @@
         columnReorderingAllowed="true">
             <actions>
                 <action id="create" type="list_create"/>
+                <action id="copy" text="msg://copyAction.text" icon="COPY_O" type="list_itemTracking"/>
                 <action id="edit" type="list_edit"/>
                 <action id="remove" type="list_remove"/>
             </actions>

@@ -16,15 +16,31 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <hbox>
-            <textField id="nameField"
-                       dataContainer="clientDc" property="name" label="msg://com.company.timesheets.entity/Client.name"/>
-            <fileUploadField id="imageField"
-                             clearButtonVisible="true"
-                             fileNameVisible="true"
-                             property="image"
-                             dataContainer="clientDc" label="msg://com.company.timesheets.entity/Client.image"/>
-        </hbox>
+        <vbox id="imageWrapper"
+              classNames="image-wrapper"
+              alignItems="CENTER"
+              width="100%" maxWidth="30em">
+            <image id="image" height="10em"
+                   dataContainer="clientDc" property="image"
+                   alternateText="msg://com.company.timesheets.entity/Client.image"/>
+            <hbox id="uploadWrapper" expand="imageUpload" width="100%">
+                <fileUploadField id="imageUpload"
+                                 dataContainer="clientDc" property="image"
+                                 uploadIcon="UPLOAD_ALT"/>
+                <button id="uploadClearBtn" icon="CLOSE_BIG">
+                    <tooltip text="msg://uploadClearBtn.tooltip"/>
+                </button>
+            </hbox>
+        </vbox>
+
+        <textField id="nameField"
+                   dataContainer="clientDc" property="name"
+                   label="msg://com.company.timesheets.entity/Client.name"
+                   width="100%" maxWidth="30em">
+            <prefix>
+                <icon icon="USER_CARD"/>
+            </prefix>
+        </textField>
 
         <details width="100%"
                  summaryText="msg://com.company.timesheets.entity/Client.contactInformation" opened="true">
@@ -32,10 +48,27 @@
                 <responsiveSteps>
                     <responsiveStep minWidth="0" columns="3"/>
                 </responsiveSteps>
-                <textField id="contactInformationUrlField" property="contactInformation.url"/>
-                <textField id="contactInformationPhoneField" property="contactInformation.phone"/>
-                <textField id="contactInformationEmailField" property="contactInformation.email"/>
-                <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address" colspan="3"/>
+                <textField id="contactInformationUrlField" property="contactInformation.url">
+                    <prefix>
+                        <icon icon="LINK"/>
+                    </prefix>
+                </textField>
+                <textField id="contactInformationPhoneField" property="contactInformation.phone">
+                    <prefix>
+                        <icon icon="PHONE_LANDLINE"/>
+                    </prefix>
+                </textField>
+                <textField id="contactInformationEmailField" property="contactInformation.email">
+                    <prefix>
+                        <icon icon="ENVELOPE"/>
+                    </prefix>
+                </textField>
+                <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address"
+                          colspan="3">
+                    <prefix>
+                        <icon icon="MAP_MARKER"/>
+                    </prefix>
+                </textArea>
             </formLayout>
         </details>
         <hbox id="detailActions">

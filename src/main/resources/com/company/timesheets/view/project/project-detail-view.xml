@@ -14,6 +14,15 @@
             <collection id="participantsDc" property="participants"/>
             <collection id="tasksDc" property="tasks"/>
         </instance>
+        <collection id="clientsDc" class="com.company.timesheets.entity.Client">
+            <loader id="clientsDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_Client e]]>
+                </query>
+            </loader>
+            <fetchPlan extends="_base"/>
+        </collection>
+
     </data>
     <facets>
         <dataLoadCoordinator auto="true"/>
@@ -23,19 +32,29 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <formLayout id="form" dataContainer="projectDc">
+        <formLayout id="form" dataContainer="projectDc" maxWidth="40em">
             <responsiveSteps>
                 <responsiveStep minWidth="0" columns="1"/>
-                <responsiveStep minWidth="40em" columns="2"/>
             </responsiveSteps>
-            <textField id="nameField" property="name"/>
-            <entityPicker id="clientField" property="client">
+            <textField id="nameField" property="name">
+                <prefix>
+                    <icon icon="USER_CARD"/>
+                </prefix>
+            </textField>
+            <entityComboBox id="clientsComboBox" property="client"
+                            itemsContainer="clientsDc" dataContainer="projectDc">
+                <prefix>
+                    <icon icon="USER"/>
+                </prefix>
                 <actions>
-                    <action id="entityLookupAction" type="entity_lookup"/>
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
-            </entityPicker>
-            <textArea id="descriptionField" property="description"/>
+            </entityComboBox>
+            <textArea id="descriptionField" property="description" height="9.5em">
+                <prefix>
+                    <icon icon="COMMENT_O"/>
+                </prefix>
+            </textArea>
             <select id="statusField" property="status"/>
         </formLayout>
 

@@ -1,20 +1,51 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <menu-config xmlns="http://jmix.io/schema/flowui/menu">
 
-    <menu id="application" title="msg://com.company.timesheets/menu.application.title" opened="true">
-        <item view="ts_User.list" title="msg://com.company.timesheets.view.user/UserListView.title"/>
+    <menu opened="true" id="timesheets" description="msg://com.company.timesheets/menu_config.timesheets.description"
+          title="msg://com.company.timesheets/menu_config.timesheets.title">
+        <item view="TimeEntries.my" title="msg://com.company.timesheets.view.mytimeentries/myTimeEntries.title"/>
+        <item view="Tasks.my" title="msg://com.company.timesheets.view.task/myTasksListView.title"/>
+    </menu>
+    <menu id="projects" description="msg://com.company.timesheets/menu_config.projects.description"
+          title="msg://com.company.timesheets/menu_config.projects.title" opened="true">
         <item view="ts_Project.list" title="msg://com.company.timesheets.view.project/projectListView.title"/>
-        <item view="ts_Task.list" title="msg://com.company.timesheets.view.task/taskListView.title"/>
         <item view="ts_Client.list" title="msg://com.company.timesheets.view.client/clientListView.title"/>
+        <item view="ts_Task.list" title="msg://com.company.timesheets.view.task/taskListView.title"/>
+        <item view="ts_TimeEntry.list" title="msg://com.company.timesheets.view.timeentry/timeEntryListView.title"/>
+        <item view="ts_User.list" title="msg://com.company.timesheets.view.user/UserListView.title"/>
+    </menu>
+    <menu id="settings" title="msg://com.company.timesheets/menu.application.title"
+          description="msg:///menu_config.settings.description">
         <item view="ts_TaskType.list" title="msg://com.company.timesheets.view.tasktype/taskTypeListView.title"/>
         <item view="ts_ProjectRole.list"
               title="msg://com.company.timesheets.view.projectrole/projectRoleListView.title"/>
-        <item view="ts_TimeEntry.list" title="msg://com.company.timesheets.view.timeentry/timeEntryListView.title"/>
         <item view="ts_HoursReportView" title="msg://com.company.timesheets.view.hoursreport/hoursReportView.title"/>
         <item view="ts_BillingRecord.list"
               title="msg://com.company.timesheets.view.billingrecord/billingRecordListView.title"/>
-<!--        <item view="ts_Client.list-repo" title="msg://com.company.timesheets.view.client/clientListViewRepo.title"/>-->
-        <item view="TimeEntries.my" title="msg://com.company.timesheets.view.mytimeentries/myTimeEntries.title"/>
     </menu>
-
+    <menu id="administration" description="msg://com.company.timesheets/menu_config.administration.description"
+          title="msg://com.company.timesheets/menu_config.administration.title" icon="SERVER">
+        <menu id="security" title="msg://com.company.timesheets/menu.security.title">
+            <item view="sec_ResourceRoleModel.list"
+                  title="msg://io.jmix.securityflowui.view.resourcerole/resourceRoleModelListView.menu"/>
+            <item view="sec_RowLevelRoleModel.list"
+                  title="msg://io.jmix.securityflowui.view.rowlevelrole/rowLevelRoleModelListView.menu"/>
+        </menu>
+        <menu id="quartz" title="msg://com.company.timesheets/menu.quartz.title">
+            <item view="quartz_JobModel.list" title="msg://io.jmix.quartzflowui.view.jobs/jobModelListView.menu"/>
+        </menu>
+        <menu id="audit" title="msg://com.company.timesheets/menu.audit.title">
+            <item view="entityLog.view" title="msg://io.jmix.auditflowui.view.entitylog/entityLogView.menu"/>
+            <item view="userSession.view" title="msg://io.jmix.auditflowui.view.entitylog/UserSessionsView.menu"/>
+        </menu>
+        <menu id="datatools" title="msg://com.company.timesheets/menu.datatools.title">
+            <item view="datatl_entityInspectorListView"
+                  title="msg://io.jmix.datatoolsflowui.view.entityinspector/listTitle"/>
+            <item view="datatl_dataModelListView"
+                  title="msg://io.jmix.datatoolsflowui.view.datamodel/entityModelListView.title"/>
+        </menu>
+        <menu id="pessimisticlock" title="msg://com.company.timesheets/menu.pessimisticlock.title">
+            <item view="pslock_LockInfo.list" title="msg://io.jmix.pessimisticlockflowui/pessimisticLockListView.menu"/>
+        </menu>
+    </menu>
 </menu-config>

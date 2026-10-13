@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @ViewController(id = "ts_ProjectParticipant.detail")
 @ViewDescriptor(path = "project-participant-detail-view.xml")
 @EditedEntityContainer("projectParticipantDc")
+@DialogMode(width = "35em")
 public class ProjectParticipantDetailView extends StandardDetailView<ProjectParticipant> {
 
     @Autowired
