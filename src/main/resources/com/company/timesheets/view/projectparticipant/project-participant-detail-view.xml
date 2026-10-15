@@ -24,12 +24,24 @@
                 <responsiveStep minWidth="0" columns="1"/>
                 <responsiveStep minWidth="40em" columns="2"/>
             </responsiveSteps>
-            <entityPicker id="userField" property="user">
+            <entityComboBox id="userField" property="user">
                 <actions>
                     <action id="entityLookupAction" type="entity_lookup"/>
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
-            </entityPicker>
+                <itemsQuery class="com.company.timesheets.entity.User"
+                            searchStringFormat="%${inputString}%"
+                            escapeValueForLike="true">
+                    <fetchPlan extends="_base"/>
+                    <query>
+                        select e from ts_User e
+                            where e.username like :searchString
+                            or e.firstName like :searchString
+                            or e.lastName like :searchString
+                            escape '\' order by e.username asc
+                    </query>
+                </itemsQuery>
+            </entityComboBox>
             <entityPicker id="projectRoleField" property="projectRole">
                 <actions>
                     <action id="entityCreateAction" text="msg:///actions.Create" icon="PLUS"/>

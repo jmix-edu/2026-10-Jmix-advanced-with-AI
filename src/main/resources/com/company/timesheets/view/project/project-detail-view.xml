@@ -7,12 +7,8 @@
                   class="com.company.timesheets.entity.Project">
             <fetchPlan extends="_base">
                 <property name="client" fetchPlan="_base"/>
-                <property name="tasks" fetchPlan="_base"/>
-                <property name="participants" fetchPlan="_base"/>
             </fetchPlan>
             <loader id="projectDl"/>
-            <collection id="participantsDc" property="participants"/>
-            <collection id="tasksDc" property="tasks"/>
         </instance>
         <collection id="clientsDc" class="com.company.timesheets.entity.Client">
             <loader id="clientsDl" readOnly="true">
@@ -22,62 +18,84 @@
             </loader>
             <fetchPlan extends="_base"/>
         </collection>
-
+        <collection id="participantsDc" class="com.company.timesheets.entity.ProjectParticipant">
+            <loader id="participantsDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_ProjectParticipant e where e.project = :project]]>
+                </query>
+            </loader>
+            <fetchPlan extends="_base">
+                <property name="projectRole" fetchPlan="_base"/>
+            </fetchPlan>
+        </collection>
+        <collection id="tasksDc" class="com.company.timesheets.entity.Task">
+            <loader id="tasksDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_Task e where e.project = :project]]>
+                </query>
+            </loader>
+            <fetchPlan extends="_base"/>
+        </collection>
     </data>
     <facets>
-        <dataLoadCoordinator auto="true"/>
+        <dataLoadCoordinator auto="false">
+            <refresh loader="projectDl">
+                <onViewEvent type="BeforeShow"/>
+            </refresh>
+            <refresh loader="clientsDl">
+                <onViewEvent type="BeforeShow"/>
+            </refresh>
+        </dataLoadCoordinator>
     </facets>
     <actions>
         <action id="saveCloseAction" type="detail_saveClose"/>
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <formLayout id="form" dataContainer="projectDc" maxWidth="40em">
-            <responsiveSteps>
-                <responsiveStep minWidth="0" columns="1"/>
-            </responsiveSteps>
-            <textField id="nameField" property="name">
-                <prefix>
-                    <icon icon="USER_CARD"/>
-                </prefix>
-            </textField>
-            <entityComboBox id="clientsComboBox" property="client"
-                            itemsContainer="clientsDc" dataContainer="projectDc">
-                <prefix>
-                    <icon icon="USER"/>
-                </prefix>
-                <actions>
-                    <action id="entityClearAction" type="entity_clear"/>
-                </actions>
-            </entityComboBox>
-            <textArea id="descriptionField" property="description" height="9.5em">
-                <prefix>
-                    <icon icon="COMMENT_O"/>
-                </prefix>
-            </textArea>
-            <select id="statusField" property="status"/>
-        </formLayout>
-
         <tabSheet id="tabSheet" width="100%" height="100%">
-            <tab id="participantsTab" label="msg://com.company.timesheets.entity/Project.participants">
+            <tab id="projectTab" label="msg://com.company.timesheets.entity/Project">
+                <formLayout id="form" dataContainer="projectDc" maxWidth="40em">
+                    <responsiveSteps>
+                        <responsiveStep minWidth="0" columns="1"/>
+                    </responsiveSteps>
+                    <textField id="nameField" property="name">
+                        <prefix>
+                            <icon icon="USER_CARD"/>
+                        </prefix>
+                    </textField>
+                    <entityComboBox id="clientsComboBox" property="client"
+                                    itemsContainer="clientsDc" dataContainer="projectDc">
+                        <prefix>
+                            <icon icon="USER"/>
+                        </prefix>
+                        <actions>
+                            <action id="entityClearAction" type="entity_clear"/>
+                        </actions>
+                    </entityComboBox>
+                    <textArea id="descriptionField" property="description" height="9.5em">
+                        <prefix>
+                            <icon icon="COMMENT_O"/>
+                        </prefix>
+                    </textArea>
+                    <select id="statusField" property="status"/>
+                </formLayout>
+            </tab>
+            <tab id="participantsTab" label="msg://com.company.timesheets.entity/Project.participants" lazy="true">
                 <vbox height="100%">
                     <hbox id="participantsButtonsPanel" wrap="true" width="100%">
-                        <button action="participantsDataGrid.createAction"/>
-                        <button action="participantsDataGrid.editAction"/>
-                        <button action="participantsDataGrid.removeAction"/>
+                        <startSlot>
+                            <button action="participantsDataGrid.createAction"/>
+                            <button action="participantsDataGrid.editAction"/>
+                            <button action="participantsDataGrid.removeAction"/>
+                        </startSlot>
+                        <endSlot>
+                            <simplePagination id="participantsSimplePagination" dataLoader="participantsDl"/>
+                        </endSlot>
                     </hbox>
                     <dataGrid id="participantsDataGrid" dataContainer="participantsDc" width="100%" height="100%">
                         <actions>
-                            <action id="createAction" type="list_create">
-                                <properties>
-                                    <property name="openMode" value="DIALOG"/>
-                                </properties>
-                            </action>
-                            <action id="editAction" type="list_edit">
-                                <properties>
-                                    <property name="openMode" value="DIALOG"/>
-                                </properties>
-                            </action>
+                            <action id="createAction" type="list_create"/>
+                            <action id="editAction" type="list_edit"/>
                             <action id="removeAction" type="list_remove"/>
                         </actions>
                         <columns>
@@ -88,25 +106,22 @@
                 </vbox>
             </tab>
 
-            <tab id="tasksTab" label="msg://com.company.timesheets.entity/Project.tasks">
+            <tab id="tasksTab" label="msg://com.company.timesheets.entity/Project.tasks" lazy="true">
                 <vbox height="100%">
                     <hbox id="tasksButtonsPanel" wrap="true" width="100%">
-                        <button action="tasksDataGrid.createAction"/>
-                        <button action="tasksDataGrid.editAction"/>
-                        <button action="tasksDataGrid.removeAction"/>
+                        <startSlot>
+                            <button action="tasksDataGrid.createAction"/>
+                            <button action="tasksDataGrid.editAction"/>
+                            <button action="tasksDataGrid.removeAction"/>
+                        </startSlot>
+                        <endSlot>
+                            <simplePagination id="tasksSimplePagination" dataLoader="tasksDl"/>
+                        </endSlot>
                     </hbox>
                     <dataGrid id="tasksDataGrid" dataContainer="tasksDc" width="100%" height="100%">
                         <actions>
-                            <action id="createAction" type="list_create">
-                                <properties>
-                                    <property name="openMode" value="DIALOG"/>
-                                </properties>
-                            </action>
-                            <action id="editAction" type="list_edit">
-                                <properties>
-                                    <property name="openMode" value="DIALOG"/>
-                                </properties>
-                            </action>
+                            <action id="createAction" type="list_create"/>
+                            <action id="editAction" type="list_edit"/>
                             <action id="removeAction" type="list_remove"/>
                         </actions>
                         <columns>
@@ -118,7 +133,6 @@
                 </vbox>
             </tab>
         </tabSheet>
-
 
 
         <hbox id="detailActions">

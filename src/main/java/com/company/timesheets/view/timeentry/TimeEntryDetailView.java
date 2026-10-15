@@ -43,9 +43,8 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     @Subscribe(id = "timeEntryDc", target = Target.DATA_CONTAINER)
     public void onTimeEntryDcItemChange(final InstanceContainer.ItemChangeEvent<TimeEntry> event) {
         updateRejectionReasonField();
+        loadTasks();
     }
-
-
 
     @Subscribe(id = "timeEntryDc", target = Target.DATA_CONTAINER)
     public void onTimeEntryDcItemPropertyChange(final InstanceContainer.ItemPropertyChangeEvent<TimeEntry> event) {

@@ -1,9 +1,18 @@
 package com.company.timesheets.view.task;
 
 import com.company.timesheets.entity.Task;
+import com.company.timesheets.entity.TimeEntry;
+import com.company.timesheets.entity.User;
 import com.company.timesheets.view.main.MainView;
+import com.company.timesheets.view.timeentry.TimeEntryDetailView;
 import com.vaadin.flow.router.Route;
+import io.jmix.core.DataManager;
+import io.jmix.core.security.CurrentAuthentication;
+import io.jmix.flowui.DialogWindows;
+import io.jmix.flowui.component.grid.DataGrid;
+import io.jmix.flowui.kit.action.ActionPerformedEvent;
 import io.jmix.flowui.view.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 
 @Route(value = "my-tasks", layout = MainView.class)
@@ -12,5 +21,34 @@ import io.jmix.flowui.view.*;
 @LookupComponent("tasksDataGrid")
 @DialogMode(width = "64em")
 public class MyTasksListView extends StandardListView<Task> {
+    @ViewComponent
+    private DataGrid<Task> tasksDataGrid;
+    @Autowired
+    private CurrentAuthentication currentAuthentication;
+    @Autowired
+    private DataManager dataManager;
+    @Autowired
+    private DialogWindows dialogWindows;
+
+    @Subscribe("tasksDataGrid.createTimeEntryAction")
+    public void onTasksDataGridCreateTimeEntryAction(final ActionPerformedEvent event) {
+        Task selectedTask = tasksDataGrid.getSingleSelectedItem();
+        User user = (User) currentAuthentication.getUser();
+         if (selectedTask == null || user == null) {
+             return;
+         }
+
+        TimeEntry newEntry = dataManager.create(TimeEntry.class);
+         newEntry.setUser(user);
+         newEntry.setTask(selectedTask);
+
+         DialogWindow<TimeEntryDetailView> dialogWindow = dialogWindows.detail(this, TimeEntry.class)
+                 .withViewClass(TimeEntryDetailView.class)
+                 .newEntity(newEntry)
+                 .build();
+
+         dialogWindow.open();
+
+    }
 
 }

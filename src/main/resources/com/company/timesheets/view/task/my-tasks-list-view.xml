@@ -41,6 +41,9 @@
             <startSlot>
                 <button id="readButton" action="tasksDataGrid.readAction"/>
                 <button id="refreshButton" action="tasksDataGrid.refreshAction"/>
+                <button id="createTimeEntryButton" action="tasksDataGrid.createTimeEntryAction"
+                        text="msg://createTimeEntryButton.text"
+                        icon="CLOCK"/>
             </startSlot>
             <endSlot>
                 <simplePagination id="pagination" dataLoader="tasksDl"/>
@@ -54,6 +57,7 @@
             <actions>
                 <action id="readAction" type="list_read"/>
                 <action id="refreshAction" type="list_refresh"/>
+                <action id="createTimeEntryAction" type="list_itemTracking"/>
             </actions>
             <columns resizable="true">
                 <column property="name"/>

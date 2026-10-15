@@ -42,6 +42,7 @@
                         <actionItem id="showUserSubstitutionsItem" ref="usersDataGrid.showUserSubstitutionsAction"/>
                     </items>
                 </dropdownButton>
+                <button id="sendEmailActionButton" action="usersDataGrid.sendEmailAction"/>
             </startSlot>
             <endSlot>
                 <simplePagination id="pagination" dataLoader="usersDl"/>
@@ -60,6 +61,7 @@
                 <action id="changePasswordAction" type="sec_changePassword"/>
                 <action id="resetPasswordAction" type="sec_resetPassword"/>
                 <action id="showUserSubstitutionsAction" type="sec_showUserSubstitutions"/>
+                <action id="sendEmailAction" text="msg://sendEmailAction.text" icon="PAPERPLANE_O"/>
             </actions>
             <columns resizable="true">
                 <column property="username"/>

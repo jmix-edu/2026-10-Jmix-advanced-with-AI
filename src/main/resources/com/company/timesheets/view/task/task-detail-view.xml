@@ -26,12 +26,6 @@
                 <responsiveStep minWidth="40em" columns="2"/>
             </responsiveSteps>
             <textField id="nameField" property="name"/>
-            <entityPicker id="projectField" property="project">
-                <actions>
-                    <action id="entityLookupAction" type="entity_lookup"/>
-                    <action id="entityClearAction" type="entity_clear"/>
-                </actions>
-            </entityPicker>
             <select id="statusField" property="status"/>
             <entityPicker id="taskTypeField" property="taskType">
                 <actions>
