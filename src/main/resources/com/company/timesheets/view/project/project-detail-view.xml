@@ -18,6 +18,8 @@
             </loader>
             <fetchPlan extends="_base"/>
         </collection>
+        <!-- Участники и задачи проекта: загрузчики запускаются из контроллера при выборе вкладки
+             (ProjectDetailView.initParticipants/initTasks), параметр :project ставится там же. -->
         <collection id="participantsDc" class="com.company.timesheets.entity.ProjectParticipant">
             <loader id="participantsDl" readOnly="true">
                 <query>
@@ -34,10 +36,14 @@
                     <![CDATA[select e from ts_Task e where e.project = :project]]>
                 </query>
             </loader>
-            <fetchPlan extends="_base"/>
+            <fetchPlan extends="_base">
+                <property name="taskType" fetchPlan="_instance_name"/>
+            </fetchPlan>
         </collection>
     </data>
     <facets>
+        <!-- auto="false": при открытии формы грузим только проект и клиентов.
+             participantsDl и tasksDl сюда не входят, их грузит контроллер. -->
         <dataLoadCoordinator auto="false">
             <refresh loader="projectDl">
                 <onViewEvent type="BeforeShow"/>
@@ -49,6 +55,7 @@
     </facets>
     <actions>
         <action id="saveCloseAction" type="detail_saveClose"/>
+        <action id="saveAction" type="detail_save"/>
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
@@ -80,6 +87,8 @@
                     <select id="statusField" property="status"/>
                 </formLayout>
             </tab>
+            <!-- lazy="true": содержимое вкладки создаётся при первом выборе,
+                 до этого гридов и их действий на форме нет. -->
             <tab id="participantsTab" label="msg://com.company.timesheets.entity/Project.participants" lazy="true">
                 <vbox height="100%">
                     <hbox id="participantsButtonsPanel" wrap="true" width="100%">
@@ -126,6 +135,7 @@
                         </actions>
                         <columns>
                             <column property="name"/>
+                            <column property="taskType"/>
                             <column property="description"/>
                             <column property="status"/>
                         </columns>
@@ -137,6 +147,7 @@
 
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>
+            <button id="saveButton" action="saveAction"/>
             <button id="closeButton" action="closeAction"/>
         </hbox>
     </layout>

@@ -4,12 +4,12 @@ package com.company.timesheets.view.mytimeentries;
 import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.service.TimeEntrySupport;
 import com.company.timesheets.view.main.MainView;
-import com.vaadin.flow.component.ClickEvent;
+import com.company.timesheets.view.timeentry.TimeEntryDetailView;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.component.grid.DataGrid;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
-import io.jmix.flowui.kit.component.button.JmixButton;
 import io.jmix.flowui.view.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -25,6 +25,7 @@ public class MyTimeEntries extends StandardView {
     @Autowired
     private DialogWindows dialogWindows;
 
+    // Копия открывается диалогом: флаг своего списания передаём сеттером до open().
     @Subscribe("timeEntriesDataGrid.copy")
     public void onTimeEntriesDataGridCopy(final ActionPerformedEvent event) {
         TimeEntry selectedToCopy = timeEntriesDataGrid.getSingleSelectedItem();
@@ -34,8 +35,23 @@ public class MyTimeEntries extends StandardView {
 
         TimeEntry copied = timeEntrySupport.copy(selectedToCopy);
 
-        dialogWindows.detail(timeEntriesDataGrid)
+        DialogWindow<TimeEntryDetailView> dialogWindow = dialogWindows.detail(timeEntriesDataGrid)
+                .withViewClass(TimeEntryDetailView.class)
                 .newEntity(copied)
-                .open();
+                .build();
+        dialogWindow.getView().setOwnTimeEntry(true);
+        dialogWindow.open();
+    }
+
+    // «Create» и «Edit» открывают форму навигацией, поэтому флаг передаём в адресе:
+    // /time-entries/new?ownTimeEntry. Форма читает его в QueryParametersChangeEvent.
+    @Install(to = "timeEntriesDataGrid.create", subject = "queryParametersProvider")
+    private QueryParameters timeEntriesDataGridCreateQueryParametersProvider() {
+        return QueryParameters.of(TimeEntryDetailView.PARAMETER_OWN_TIME_ENTRY, "");
+    }
+
+    @Install(to = "timeEntriesDataGrid.edit", subject = "queryParametersProvider")
+    private QueryParameters timeEntriesDataGridEditQueryParametersProvider() {
+        return QueryParameters.of(TimeEntryDetailView.PARAMETER_OWN_TIME_ENTRY, "");
     }
 }

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://myWeekView.title"
+      focusComponent="timeEntriesDataGrid">
+    <data>
+        <collection id="timeEntriesDc"
+                    class="com.company.timesheets.entity.TimeEntry">
+            <!-- _base already brings task and task.project: the instance names of TimeEntry and Task depend on them. -->
+            <fetchPlan extends="_base"/>
+            <!-- Loaded by the controller once the week is known: :weekStart and :weekEnd come from the URL. -->
+            <loader id="timeEntriesDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_TimeEntry e
+                     where e.user.id = :current_user_id
+                       and e.date >= :weekStart and e.date <= :weekEnd
+                     order by e.date asc, e.createdDate asc]]>
+                </query>
+            </loader>
+        </collection>
+    </data>
+    <layout>
+        <hbox id="weekPanel" alignItems="CENTER">
+            <button id="previousWeekButton" text="msg://previousWeek.text"/>
+            <span id="weekCaption"/>
+            <button id="nextWeekButton" text="msg://nextWeek.text"/>
+        </hbox>
+        <hbox id="buttonsPanel" wrap="true" width="100%">
+            <button id="createButton" action="timeEntriesDataGrid.create"/>
+            <button id="editButton" action="timeEntriesDataGrid.edit"/>
+            <button id="removeButton" action="timeEntriesDataGrid.remove"/>
+            <button id="refreshButton" action="timeEntriesDataGrid.refresh"/>
+        </hbox>
+        <dataGrid id="timeEntriesDataGrid"
+                  dataContainer="timeEntriesDc"
+                  width="100%"
+                  minHeight="20em"
+                  columnReorderingAllowed="true">
+            <actions>
+                <action id="create" type="list_create">
+                    <properties>
+                        <property name="openMode" value="DIALOG"/>
+                    </properties>
+                </action>
+                <action id="edit" type="list_edit">
+                    <properties>
+                        <property name="openMode" value="DIALOG"/>
+                    </properties>
+                </action>
+                <action id="remove" type="list_remove"/>
+                <action id="refresh" type="list_refresh"/>
+            </actions>
+            <columns resizable="true">
+                <column property="date" autoWidth="true" flexGrow="0"/>
+                <column key="project" header="msg://com.company.timesheets.entity/Task.project"/>
+                <column property="task"/>
+                <column property="spentTime" autoWidth="true" flexGrow="0"/>
+                <column property="status" autoWidth="true" flexGrow="0"/>
+                <column property="description" flexGrow="2"/>
+            </columns>
+        </dataGrid>
+        <hbox id="totalsPanel" wrap="true" width="100%"/>
+    </layout>
+</view>

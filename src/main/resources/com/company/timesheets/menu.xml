@@ -5,6 +5,7 @@
           title="msg://com.company.timesheets/menu_config.timesheets.title">
         <item view="TimeEntries.my" title="msg://com.company.timesheets.view.mytimeentries/myTimeEntries.title"/>
         <item view="Tasks.my" title="msg://com.company.timesheets.view.task/myTasksListView.title"/>
+        <item view="TimeEntries.myWeek" title="msg://com.company.timesheets.view.myweek/myWeekView.title"/>
     </menu>
     <menu id="projects" description="msg://com.company.timesheets/menu_config.projects.description"
           title="msg://com.company.timesheets/menu_config.projects.title" opened="true">

@@ -30,7 +30,7 @@
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
                 <itemsQuery class="com.company.timesheets.entity.User"
-                            searchStringFormat="%${inputString}%"
+                            searchStringFormat="(?i)%${inputString}%"
                             escapeValueForLike="true">
                     <fetchPlan extends="_base"/>
                     <query>

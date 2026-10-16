@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      xmlns:c="http://jmix.io/schema/flowui/jpql-condition"
+      title="msg://taskLookupView.title"
+      focusComponent="tasksDataGrid">
+    <data>
+        <collection id="tasksDc"
+                    class="com.company.timesheets.entity.Task">
+            <fetchPlan extends="_base">
+                <property name="taskType" fetchPlan="_base"/>
+            </fetchPlan>
+            <loader id="tasksDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_Task e
+                             where e.project.status = @enum(com.company.timesheets.entity.ProjectStatus.OPEN)
+                               and e.status = @enum(com.company.timesheets.entity.TaskStatus.ACTIVE)
+                             order by e.project.name asc, e.name asc]]>
+                    <condition>
+                        <and>
+                            <c:jpql>
+                                <c:where>exists (select pp from ts_ProjectParticipant pp where pp.project = {E}.project and pp.user = :user)</c:where>
+                            </c:jpql>
+                        </and>
+                    </condition>
+                </query>
+            </loader>
+        </collection>
+        <collection id="projectsDc" class="com.company.timesheets.entity.Project">
+            <fetchPlan extends="_instance_name"/>
+            <loader id="projectsDl" readOnly="true">
+                <query>
+                    <![CDATA[select e from ts_Project e
+                             where e.status = @enum(com.company.timesheets.entity.ProjectStatus.OPEN)
+                             order by e.name asc]]>
+                    <condition>
+                        <and>
+                            <c:jpql>
+                                <c:where>exists (select pp from ts_ProjectParticipant pp where pp.project = {E} and pp.user = :user)</c:where>
+                            </c:jpql>
+                        </and>
+                    </condition>
+                </query>
+            </loader>
+        </collection>
+    </data>
+    <facets>
+        <dataLoadCoordinator auto="true"/>
+    </facets>
+    <actions>
+        <action id="selectAction" type="lookup_select"/>
+        <action id="discardAction" type="lookup_discard"/>
+    </actions>
+    <layout>
+        <formLayout id="filterLayout">
+            <propertyFilter id="projectFilter"
+                            dataLoader="tasksDl" property="project"
+                            operation="EQUAL"
+                            labelVisible="false">
+                <entityComboBox id="projectFilterField"
+                                metaClass="ts_Project"
+                                itemsContainer="projectsDc"
+                                placeholder="msg://projectFilter.placeholder">
+                    <prefix>
+                        <icon icon="SEARCH"/>
+                    </prefix>
+                    <actions>
+                        <action id="entityClearAction" type="entity_clear"/>
+                    </actions>
+                </entityComboBox>
+            </propertyFilter>
+            <propertyFilter id="nameFilter"
+                            dataLoader="tasksDl" property="name"
+                            operation="CONTAINS"
+                            labelVisible="false">
+                <textField id="nameFilterField"
+                           placeholder="msg://nameFilter.placeholder"
+                           clearButtonVisible="true">
+                    <prefix>
+                        <icon icon="SEARCH"/>
+                    </prefix>
+                </textField>
+            </propertyFilter>
+        </formLayout>
+        <dataGrid id="tasksDataGrid"
+                  width="100%"
+                  minHeight="20em"
+                  dataContainer="tasksDc"
+                  columnReorderingAllowed="true">
+            <columns resizable="true">
+                <column property="project"/>
+                <column property="name"/>
+                <column property="taskType"/>
+                <column property="description" flexGrow="2"/>
+            </columns>
+        </dataGrid>
+        <hbox id="lookupActions" visible="false">
+            <button id="selectButton" action="selectAction"/>
+            <button id="discardButton" action="discardAction"/>
+        </hbox>
+    </layout>
+</view>
