@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright 2021 Haulmont.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<template xmlns="http://schemas.haulmont.com/studio/template-settings.xsd"
+          icon="resource://template/template_browse.svg"
+          name="Entity list simple view"
+          order="10">
+    <tags>
+        <tag>ENTITY</tag>
+        <tag>JPA</tag>
+    </tags>
+    <description>
+        <![CDATA[<html>Entity list simple view. Displays a list of entities in the DataGrid component. Has a property filter instead of a Generic one</html>]]>
+    </description>
+    <locMessages key="viewTitle" expressionKey="${studioUtils.decapitalize(viewControllerName)}.title">
+        <message lang="default">
+            <![CDATA[${studioUtils.makeScreenNaturalCaption(entity.className.concat('.browse'), null)}]]>
+        </message>
+    </locMessages>
+    <steps>
+        <step name="Entity list view" order="0" description="Fill the form"/>
+        <step name="Entity list view fetch plan" order="1"
+              description="List view fetch plan determines entity attributes and associations to be loaded from the database and displayed in the dataGrid component"/>
+    </steps>
+    <property caption="Entity"
+              code="entity"
+              propertyType="ENTITY"
+              required="true"/>
+    <property caption="Use Data Repositories"
+              code="useDataRepositories"
+              propertyType="BOOLEAN"
+              defaultValue="false"
+              advanced="true"/>
+    <property caption="Repository"
+              code="repository"
+              propertyType="DATA_REPOSITORY"
+              advanced="true">
+         <dynamicAttribute name="enabled" source="${useDataRepositories}">
+            <dependency code = "useDataRepositories"/>
+        </dynamicAttribute>
+        <dynamicAttribute name="visible" source="${useDataRepositories}">
+            <dependency code = "useDataRepositories"/>
+        </dynamicAttribute>
+        <dynamicAttribute name="required" source="${useDataRepositories}">
+            <dependency code = "useDataRepositories"/>
+        </dynamicAttribute>
+    </property>
+
+    <property caption="Use Update Service"
+              code="useUpdateService"
+              propertyType="BOOLEAN"
+              defaultValue="false"
+              advanced="true"/>
+    <property caption="Update Service"
+              code="updateService"
+              propertyType="ENTITY_UPDATE_SERVICE"
+              advanced="true">
+        <dynamicAttribute name="enabled" source="${useUpdateService}">
+            <dependency code = "useUpdateService"/>
+        </dynamicAttribute>
+        <dynamicAttribute name="visible" source="${useUpdateService}">
+            <dependency code = "useUpdateService"/>
+        </dynamicAttribute>
+        <dynamicAttribute name="required" source="${useUpdateService}">
+            <dependency code = "useUpdateService"/>
+        </dynamicAttribute>
+    </property>
+
+    <property caption="Entity fetch plan"
+              code="listFetchPlan"
+              step="1"
+              propertyType="VIEW_COMPONENT"
+              relatedProperty="entity"
+              required="true"/>
+    <property caption="Table type"
+              code="tableType"
+              propertyType="FLOW_TABLE_TYPE"
+              relatedProperty="entity"
+              required="true"/>
+    <property caption="Hierarchical property"
+              code="hierarchicalProperty"
+              propertyType="HIERARCHICAL_PROPERTY"
+              relatedProperty="tableType"
+              required="false"/>
+    <property caption="Table actions"
+              code="tableActions"
+              defaultValue="create,edit,remove"
+              propertyType="MULTI_OPTION"
+              preferences="true"
+              optionsString="${actionSearch.getWizardTableActions(api.jmixProjectModule)}"/>
+    <property caption="Filter property"
+              code="filterProperty"
+              propertyType="STRING"
+              required="true"/>
+    <property caption="Multiselect"
+              code="multiselect"
+              propertyType="BOOLEAN"
+              preferences="true"
+              defaultValue="true"/>
+    <property caption="Column reordering"
+              code="columnReorderingAllowed"
+              propertyType="BOOLEAN"
+              preferences="true"
+              defaultValue="true"/>
+    <property caption="Resizable columns"
+              code="resizableColumns"
+              propertyType="BOOLEAN"
+              preferences="true"
+              defaultValue="true"/>
+    <property caption="Fixed footer"
+              code="listFixedFooter"
+              propertyType="BOOLEAN"
+              preferences="true"/>
+
+    <property caption="Descriptor name"
+              code="viewDescriptorName"
+              propertyType="DESCRIPTOR_NAME"
+              advanced="true"
+              dynamic="true"
+              sourceName="descriptor"
+              required="true"
+              valueTemplate="${api.evaluateScript('descriptorFileName.groovy', ['entity': entity])}-list-simple-view">
+        <dependency code="entity"/>
+    </property>
+
+    <property caption="Controller name"
+              code="viewControllerName"
+              propertyType="CLASS_NAME"
+              advanced="true"
+              dynamic="true"
+              sourceName="controller"
+              required="true"
+              valueTemplate="${entity.className}ListSimpleView">
+        <dependency code="entity"/>
+    </property>
+
+    <property caption="View id"
+              code="viewId"
+              propertyType="SCREEN_ID"
+              required="true"
+              dynamic="true"
+              advanced="true"
+              valueTemplate="${entity.name!=null?entity.name:entity.className}.list-simple">
+        <dependency code="entity"/>
+    </property>
+
+    <property caption="View route"
+              code="listRoute"
+              propertyType="FLOW_VIEW_ROUTE"
+              advanced="true"
+              dynamic="true"
+              required="true"
+              valueTemplate="${api.pluralForm(entity.uncapitalizedClassName)}-simple">
+        <dependency code="entity"/>
+    </property>
+
+    <property caption="View route layout"
+              code="routeLayout"
+              propertyType="FLOW_VIEW_ROUTE_LAYOUT"
+              visible="false"
+              advanced="true"/>
+
+    <property caption="Parent menu item"
+              code="menuItem"
+              propertyType="FLOW_MENU_ITEM"/>
+
+    <!--sources-->
+    <source fileExt="xml"
+            name="descriptor"/>
+    <source fileExt="java"
+            name="controller"/>
+    <source fileExt="kt"
+            name="controller"/>
+</template>

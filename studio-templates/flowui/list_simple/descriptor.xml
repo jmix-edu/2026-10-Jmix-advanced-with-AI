@@ -1,0 +1,96 @@
+<%
+def pluralForm = api.pluralForm(entity.uncapitalizedClassName)
+tableId = "${pluralForm}DataGrid"
+def tableDc = entity.uncapitalizedClassName.equals(pluralForm) ? pluralForm + "CollectionDc" : pluralForm + "Dc"
+def tableDl = entity.uncapitalizedClassName.equals(pluralForm) ? pluralForm + "CollectionDl" : pluralForm + "Dl"
+def isNotPersistEntity = entity.isDeepInheritor('com.haulmont.cuba.core.entity.AbstractNotPersistentEntity')
+
+private Object getActionSearchSafely() {
+    try {
+        return actionSearch
+    } catch(Exception e) {
+        return null
+    }
+}
+
+def groupDataGridNamespace = tableType.getXmlName().equals("groupg:groupDataGrid")
+        ? ' xmlns:groupg="http://jmix.io/schema/groupgrid/ui"'
+        : ''
+
+def tableXml = api.processSnippet('table.xml',
+        ['jmixProjectModule': api.jmixProjectModule,
+        'actionSearch': getActionSearchSafely(),
+        'tableActions': tableActions,
+        'entity': entity,
+        'fetchPlan': listFetchPlan,
+        'tableDc': tableDc,
+        'tableDl': tableDl,
+        'tableType': tableType,
+        'tableId': tableId,
+        'multiselect': multiselect,
+        'columnReorderingAllowed': columnReorderingAllowed,
+        'resizableColumns': resizableColumns,
+        'hierarchicalProperty': binding.hasVariable('tableType_hierarchicalProperty') ? binding.getVariable('tableType_hierarchicalProperty') : null])
+%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      ${groupDataGridNamespace}
+      title="${messageKeys['viewTitle']}"
+      focusComponent="${tableId}">
+    <data>
+        <collection id="${tableDc}"
+                    class="${entity.fqn}"<%if (!is_inline_listFetchPlan) {%>
+        fetchPlan="${listFetchPlan.name}"<%}%>> <%if (is_inline_listFetchPlan) {%>
+            ${inline_listFetchPlan}
+            <%}%><loader id="${tableDl}" readOnly="true"<%if (!useDataRepositories){%>>
+                <query>
+                    <![CDATA[select e from ${entity.name} e]]>
+                </query>
+            </loader><%} else {%>/><%}%>
+        </collection>
+    </data>
+    <facets>
+        <dataLoadCoordinator auto="true"/>
+        <settings auto="true"/>
+        <urlQueryParameters>
+            <propertyFilter component="filter"/>
+            <pagination component="pagination"/>
+        </urlQueryParameters>
+    </facets>
+    <actions>
+        <action id="selectAction" type="lookup_select"/>
+        <action id="discardAction" type="lookup_discard"/>
+    </actions>
+    <%if (listFixedFooter) {%>
+    <layout alignItems="STRETCH"
+            padding="false" spacing="false"
+            expand="contentBox">
+        <vbox id="contentBox" classNames="overflow-auto">
+    <%} else {%>
+    <layout>
+    <%}%>
+            <propertyFilter id="filter"
+                            dataLoader="${tableDl}" property="${filterProperty}"
+                            operation="CONTAINS"
+                            labelVisible="false"
+                            width="100%" maxWidth="30em">
+                <textField id="filterField"
+                           placeholder="Start typing..."
+                           clearButtonVisible="true">
+                    <prefix>
+                        <icon icon="SEARCH"/>
+                    </prefix>
+                </textField>
+            </propertyFilter>
+        ${tableXml}
+        <%if (listFixedFooter) {%>
+        </vbox>
+        <hbox id="lookupActions" visible="false"
+              classNames="footer-panel">
+        <%} else {%>
+        <hbox id="lookupActions" visible="false">
+        <%}%>
+            <button id="selectButton" action="selectAction"/>
+            <button id="discardButton" action="discardAction"/>
+        </hbox>
+    </layout>
+</view>

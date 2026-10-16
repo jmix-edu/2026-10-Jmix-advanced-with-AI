@@ -1,0 +1,50 @@
+<!--
+  ~ Copyright 2022 Haulmont.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.title"
+      focusComponent="locksTable">
+    <data>
+        <collection id="locksDc" class="io.jmix.pessimisticlock.entity.LockInfo"/>
+    </data>
+    <facets>
+        <settings auto="true"/>
+    </facets>
+    <layout>
+        <hbox id="buttonsPanel" wrap="true" width="100%">
+            <button action="locksTable.unlock"/>
+            <button action="locksTable.refresh"/>
+        </hbox>
+        <dataGrid id="locksTable" width="100%"
+                  minHeight="20em" dataContainer="locksDc">
+            <actions>
+                <action id="refresh" type="list_refresh"/>
+                <action id="unlock" type="list_itemTracking"
+                        text="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.unlock"
+                        icon="UNLOCK" actionVariant="PRIMARY"/>
+            </actions>
+            <columns>
+                <column key="objectTypeColumn"
+                        header="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.objectType"/>
+                <column key="objectIdColumn" property="objectId"
+                        header="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.objectId"/>
+                <column key="usernameColumn" property="username"
+                        header="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.username"/>
+                <column key="sinceColumn" property="since"
+                        header="msg://io.jmix.pessimisticlockflowui.view.pessimisticlock/lockListView.since"/>
+            </columns>
+        </dataGrid>
+    </layout>
+</view>
