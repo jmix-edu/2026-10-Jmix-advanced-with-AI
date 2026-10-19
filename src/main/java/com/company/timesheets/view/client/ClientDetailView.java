@@ -1,15 +1,21 @@
 package com.company.timesheets.view.client;
 
 import com.company.timesheets.entity.Client;
+import com.company.timesheets.entity.ContactInformation;
+import com.company.timesheets.view.contactinformationfragment.ContactInformationFragment;
 import com.company.timesheets.view.main.MainView;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.Route;
+import io.jmix.flowui.Fragments;
+import io.jmix.flowui.component.details.JmixDetails;
 import io.jmix.flowui.component.image.JmixImage;
 import io.jmix.flowui.component.upload.FileUploadField;
 import io.jmix.flowui.kit.component.button.JmixButton;
 import io.jmix.flowui.model.InstanceContainer;
+import io.jmix.flowui.model.InstancePropertyContainer;
 import io.jmix.flowui.view.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 
 @Route(value = "clients/:id", layout = MainView.class)
@@ -24,6 +30,12 @@ public class ClientDetailView extends StandardDetailView<Client> {
     private FileUploadField imageUpload;
     @ViewComponent
     private JmixImage<byte[]> image;
+    @Autowired
+    private Fragments fragments;
+    @ViewComponent
+    private InstancePropertyContainer<ContactInformation> contactInformationDc;
+    @ViewComponent
+    private JmixDetails contactInformationDetails;
 
     @Subscribe
     public void onReady(final ReadyEvent event) {
@@ -49,5 +61,13 @@ public class ClientDetailView extends StandardDetailView<Client> {
         getEditedEntity().setImage(null);
     }
 
+//    @Subscribe
+//    public void onInit(final InitEvent event) {
+//        ContactInformationFragment fragment = fragments.create(this, ContactInformationFragment.class);
+//        fragment.setContactInformationValues(contactInformationDc);
+//        contactInformationDetails.add(fragment);
+//    }
+
+    
 
 }

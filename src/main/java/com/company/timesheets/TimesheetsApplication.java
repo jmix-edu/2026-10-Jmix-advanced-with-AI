@@ -3,6 +3,7 @@ package com.company.timesheets;
 import com.google.common.base.Strings;
 import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.ColorScheme;
 import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.server.PWA;
 import com.vaadin.flow.theme.aura.Aura;
@@ -25,6 +26,7 @@ import javax.sql.DataSource;
 @StyleSheet(Aura.STYLESHEET)
 @StyleSheet(JmixAura.STYLESHEET)
 @StyleSheet("themes/timesheets-aura/styles.css")
+//@ColorScheme(ColorScheme.Value.DARK)
 @PWA(name = "Timesheets", shortName = "Timesheets", offline = false)
 @SpringBootApplication
 public class TimesheetsApplication implements AppShellConfigurator {

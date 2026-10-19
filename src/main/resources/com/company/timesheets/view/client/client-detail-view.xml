@@ -5,6 +5,7 @@
         <instance id="clientDc"
                   class="com.company.timesheets.entity.Client">
             <fetchPlan extends="_base"/>
+            <instance id="contactInformationDc" property="contactInformation"/>
             <loader id="clientDl"/>
         </instance>
     </data>
@@ -36,40 +37,17 @@
         <textField id="nameField"
                    dataContainer="clientDc" property="name"
                    label="msg://com.company.timesheets.entity/Client.name"
-                   width="100%" maxWidth="30em">
+                   width="100%" maxWidth="30em"
+                   classNames="bordered">
             <prefix>
                 <icon icon="USER_CARD"/>
             </prefix>
         </textField>
 
-        <details width="100%"
-                 summaryText="msg://com.company.timesheets.entity/Client.contactInformation" opened="true">
-            <formLayout dataContainer="clientDc">
-                <responsiveSteps>
-                    <responsiveStep minWidth="0" columns="3"/>
-                </responsiveSteps>
-                <textField id="contactInformationUrlField" property="contactInformation.url">
-                    <prefix>
-                        <icon icon="LINK"/>
-                    </prefix>
-                </textField>
-                <textField id="contactInformationPhoneField" property="contactInformation.phone">
-                    <prefix>
-                        <icon icon="PHONE_LANDLINE"/>
-                    </prefix>
-                </textField>
-                <textField id="contactInformationEmailField" property="contactInformation.email">
-                    <prefix>
-                        <icon icon="ENVELOPE"/>
-                    </prefix>
-                </textField>
-                <textArea id="contactInformationAddressField" height="9.5em" property="contactInformation.address"
-                          colspan="3">
-                    <prefix>
-                        <icon icon="MAP_MARKER"/>
-                    </prefix>
-                </textArea>
-            </formLayout>
+        <details id="contactInformationDetails"
+                 width="100%"
+                 summaryText="msg://com.company.timesheets.entity/Client.contactInformation" opened="true" themeNames="summary-filled bordered non-collapsible dummy-theme">
+            <fragment class="com.company.timesheets.view.contactinformationfragment.ContactInformationFragment"/>
         </details>
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>

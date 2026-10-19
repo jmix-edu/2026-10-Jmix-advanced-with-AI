@@ -1,7 +1,75 @@
 /* Define your styles here */
 
+html {
+    --aura-accent-color-light: hsl(265, 90%, 52%);
+    --aura-accent-color-dark: hsl(265, 90%, 70%);
+    --aura-base-radius: 6;
+    --aura-base-font-size: 15;
+}
+
 .image-wrapper {
     border: 1px solid var(--vaadin-border-color);
     border-radius: var(--vaadin-radius-m);
     padding: var(--vaadin-padding-s);
+}
+
+.rejected-count {
+    --aura-accent-color-light: var(--aura-red);
+    --aura-accent-color-dark: var(--aura-red);
+}
+
+/* Рамка и лёгкий градиент у кнопок (в классике на --lumo-tint/--lumo-shade/--lumo-contrast) */
+vaadin-button:not([theme~="tertiary"]),
+vaadin-menu-bar[jmix-role~="jmix-dropdown-button"] > vaadin-menu-bar-button,
+vaadin-menu-bar[jmix-role*="jmix-combo-button"] > vaadin-menu-bar-button {
+    background-image: linear-gradient(color-mix(in srgb, white 8%, transparent),
+                                      color-mix(in srgb, black 5%, transparent));
+    outline: 1px solid var(--vaadin-border-color);
+}
+
+/* Свои варианты details: несворачиваемый, с заливкой заголовка, с рамкой */
+vaadin-details-summary[theme~='non-collapsible'] {
+    pointer-events: none;
+}
+
+vaadin-details-summary[theme~='non-collapsible']::part(toggle) {
+    display: none;
+}
+
+vaadin-details-summary[theme~='summary-filled'] {
+    background-color: var(--vaadin-background-container);
+}
+
+vaadin-details-summary[theme~='summary-filled'][opened] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+vaadin-details[theme~='bordered'] {
+    border: 1px solid var(--vaadin-border-color);
+    border-radius: var(--vaadin-radius-m);
+    box-sizing: border-box;
+}
+
+vaadin-details[theme~='bordered']::part(content) {
+    padding-inline: var(--vaadin-padding-m);
+}
+
+/* Статус проекта в гриде (partNameGenerator) */
+vaadin-grid::part(open-project) {
+    color: var(--aura-green-text);
+}
+
+vaadin-grid::part(closed-project) {
+    color: var(--aura-red-text);
+}
+
+.status-approved {
+    --aura-accent-color-light: var(--aura-green);
+    --aura-accent-color-dark: var(--aura-green);
+}
+
+.status-rejected {
+    --aura-accent-color-light: var(--aura-red);
+    --aura-accent-color-dark: var(--aura-red);
 }

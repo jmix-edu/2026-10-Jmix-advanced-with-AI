@@ -2,11 +2,16 @@ package com.company.timesheets.view.mytimeentries;
 
 
 import com.company.timesheets.entity.TimeEntry;
+import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.service.TimeEntrySupport;
 import com.company.timesheets.view.main.MainView;
 import com.company.timesheets.view.timeentry.TimeEntryDetailView;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.data.renderer.Renderer;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
+import io.jmix.core.MetadataTools;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.component.grid.DataGrid;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
@@ -24,6 +29,8 @@ public class MyTimeEntries extends StandardView {
     private TimeEntrySupport timeEntrySupport;
     @Autowired
     private DialogWindows dialogWindows;
+    @Autowired
+    private MetadataTools metadataTools;
 
     // Копия открывается диалогом: флаг своего списания передаём сеттером до open().
     @Subscribe("timeEntriesDataGrid.copy")
@@ -53,5 +60,20 @@ public class MyTimeEntries extends StandardView {
     @Install(to = "timeEntriesDataGrid.edit", subject = "queryParametersProvider")
     private QueryParameters timeEntriesDataGridEditQueryParametersProvider() {
         return QueryParameters.of(TimeEntryDetailView.PARAMETER_OWN_TIME_ENTRY, "");
+    }
+
+    @Supply(to = "timeEntriesDataGrid.status", subject = "renderer")
+    private Renderer<TimeEntry> timeEntriesDataGridStatusRenderer() {
+        return new ComponentRenderer<>(Span::new, (span, timeEntry) -> {
+            // у бейджа Джеймикс под Aura нет success/error: цвет задают классы status-* (timesheets.css)
+            span.getElement().setAttribute("theme", timeEntry.getStatus() == TimeEntryStatus.CLOSED
+                    ? "badge contrast" : "badge");
+            span.setClassName(switch (timeEntry.getStatus()) {
+                case NEW, CLOSED -> "";
+                case APPROVED -> "status-approved";
+                case REJECTED -> "status-rejected";
+            });
+            span.setText(metadataTools.format(timeEntry.getStatus()));
+        });
     }
 }
