@@ -6,10 +6,12 @@ import com.company.timesheets.entity.Project;
 import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.entity.User;
-import io.jmix.core.DataManager;
+import com.company.timesheets.security.TimesheetsPolicies;
 import io.jmix.core.EntitySet;
 import io.jmix.core.FetchPlan;
 import io.jmix.core.SaveContext;
+import io.jmix.core.UnconstrainedDataManager;
+import io.jmix.core.security.AccessDeniedException;
 import io.jmix.pessimisticlock.LockManager;
 import io.jmix.pessimisticlock.entity.LockInfo;
 import io.jmix.pessimisticlock.entity.LockNotSupported;
@@ -48,15 +50,20 @@ public class MonthClosingService {
      */
     public static final String LOCK_NAME = "ts_MonthClosing";
 
-    private final DataManager dataManager;
+    // Unconstrained: closing must bill every approved entry of the month, not the ones the caller can see.
+    // Who may close is the month-closing policy, checked in closeMonth.
+    private final UnconstrainedDataManager dataManager;
     private final LockManager lockManager;
     private final TransactionTemplate transaction;
+    private final ProjectAccessSupport projectAccessSupport;
 
-    public MonthClosingService(DataManager dataManager, LockManager lockManager,
-                               PlatformTransactionManager transactionManager) {
+    public MonthClosingService(UnconstrainedDataManager dataManager, LockManager lockManager,
+                               PlatformTransactionManager transactionManager,
+                               ProjectAccessSupport projectAccessSupport) {
         this.dataManager = dataManager;
         this.lockManager = lockManager;
         this.transaction = new TransactionTemplate(transactionManager);
+        this.projectAccessSupport = projectAccessSupport;
     }
 
     /**
@@ -64,8 +71,12 @@ public class MonthClosingService {
      * one per user, ordered by username. Only past months can be closed.
      *
      * @throws MonthClosingLockedException if a closing of the same project is already running
+     * @throws AccessDeniedException if the user lacks the {@link TimesheetsPolicies#MONTH_CLOSING} policy
      */
     public List<BillingRecord> closeMonth(UUID projectId, YearMonth month) {
+        if (!projectAccessSupport.isPermitted(TimesheetsPolicies.MONTH_CLOSING)) {
+            throw new AccessDeniedException("specific", TimesheetsPolicies.MONTH_CLOSING);
+        }
         if (projectId == null || month == null || !month.isBefore(YearMonth.now())) {
             throw new IllegalArgumentException("Only a past month can be closed: " + month);
         }

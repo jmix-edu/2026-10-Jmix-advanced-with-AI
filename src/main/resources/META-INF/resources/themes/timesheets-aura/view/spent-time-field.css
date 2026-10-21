@@ -6,7 +6,3 @@
     align-items: baseline;
     gap: var(--vaadin-gap-s);
 }
-
-.spent-time-field-parts vaadin-integer-field {
-    width: 7em;
-}

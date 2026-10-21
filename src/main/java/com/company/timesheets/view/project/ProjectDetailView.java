@@ -22,6 +22,7 @@ import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.UiComponents;
 import io.jmix.flowui.component.grid.DataGrid;
 import io.jmix.flowui.component.tabsheet.JmixTabSheet;
+import io.jmix.flowui.action.AdjustWhenViewReadOnly;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
 import io.jmix.flowui.kit.action.BaseAction;
 import io.jmix.flowui.model.CollectionLoader;
@@ -83,6 +84,7 @@ public class ProjectDetailView extends StandardDetailView<Project> {
                 .addActionPerformedListener(this::onParticipantsDataGridCreateAction);
         ((BaseAction<?>) participantsDataGrid.getAction("editAction"))
                 .addActionPerformedListener(this::onParticipantsDataGridEditAction);
+        applyReadOnlyState(participantsDataGrid);
     }
 
     // Вкладка «Tasks» устроена так же, как «Participants».
@@ -98,6 +100,17 @@ public class ProjectDetailView extends StandardDetailView<Project> {
                 .addActionPerformedListener(this::onTasksDataGridCreateAction);
         ((BaseAction<?>) tasksDataGrid.getAction("editAction"))
                 .addActionPerformedListener(this::onTasksDataGridEditAction);
+        applyReadOnlyState(tasksDataGrid);
+    }
+
+    // Форма только для чтения (чужой проект руководителя, спека 03/01) выключает действия гридов при открытии,
+    // но гриды ленивых вкладок тогда ещё не созданы. Применяем к ним то же правило, что Jmix
+    // (ReadOnlyViewsSupport): выключаются действия, которые сами просят выключения в режиме только для чтения.
+    private void applyReadOnlyState(DataGrid<?> grid) {
+        grid.getActions().stream()
+                .filter(action -> action instanceof AdjustWhenViewReadOnly adjusting
+                        && adjusting.isDisabledWhenViewReadOnly())
+                .forEach(action -> action.setEnabled(!isReadOnly()));
     }
 
     // Участник и задача правятся в диалоге во вложенном DataContext формы проекта

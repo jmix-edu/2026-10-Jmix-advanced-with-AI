@@ -1,0 +1,337 @@
+= 03_access_control / 01 — Роли таймшита
+:toc:
+:status: реализована, ждёт Gate 3
+
+== Цель
+
+У приложения три рабочие роли: «Сотрудник», «Руководитель проекта»,
+«Подрядчик». Каждый видит только свои проекты и нужные ему списания.
+Задачи и участников правят руководители своих проектов, согласуют списания
+руководитель или approver проекта. Закрытие месяца выдаётся отдельной
+политикой. Отчёты и сводки остаются у администратора.
+
+== В области
+
+* Resource-роли (только UI) и row-level роли.
+* Блокировка статуса и причины отклонения в форме списания по участию в
+  проекте.
+* Проверка закрытия месяца через специфическую политику.
+* Явное распределение всех экранов, в том числе новых из M2, по ролям.
+* Тестовые пользователи с ролями и участием: дополнение к
+  `DemoDataSeeder`.
+* Тесты прав от лица пользователей.
+
+== Вне области
+
+* Заведение пользователей и назначение ролей из UI (следующая спека).
+* Вход через SSO.
+* REST и прочие не-UI каналы: resource-роли действуют только в UI.
+* `NewRole` и `TimeEntryFARole` — демо автора; к реализации автор их убрал.
+
+== Что уже есть
+
+Проверено по коду проекта и исходникам `jmix-security`,
+`jmix-security-data` 3.0.2:
+
+* Участие — `ProjectParticipant` (пользователь, проект, `ProjectRole`), тип
+  роли — `ProjectRoleType`: `MANAGER`, `APPROVER`, `MEMBER`, `OBSERVER`.
+  «Руководитель» и «approver» проекта в этой спеке — участник с ролью этого
+  типа.
+* Роли проекта: `FullAccessRole` (у admin), `UiMinimalRole` (главный экран,
+  вход). Других назначений нет.
+* `DemoDataSeeder` создаёт alice, boris, chen, dana с паролем `password`,
+  проекты, участие и списания, но *ролей им не назначает* и запускается только
+  на пустой базе (`isEmpty()`). На уже заполненной `ts_live` пользователи
+  есть, ролей у них нет.
+* `@ResourceRole(scope = SecurityScope.UI)` ограничивает resource-роль UI.
+  У `@RowLevelRole` атрибута `scope` нет: row-level политики действуют на
+  каждый вызов `DataManager` (не `UnconstrainedDataManager`), где бы он ни был.
+* *Несколько JPQL row-level политик на одну сущность объединяются через AND*
+  (`ReadEntityQueryConstraint` → `addJoinAndWhere` для каждой политики).
+  Поэтому «сотрудник видит своё, руководитель — ещё и чужое в своих
+  проектах» нельзя собрать двумя ролями. Нужна одна политика с `or` внутри.
+* `@PredicateRowLevelPolicy(entityClass, actions = {CREATE, UPDATE, DELETE})`
+  — метод возвращает `RowLevelBiPredicate<E, ApplicationContext>`. Это
+  in-memory проверка: она отключает действия грида на чужих строках и
+  отклоняет сохранение.
+* Назначения ролей — `RoleAssignmentEntity` (`username`, `roleCode`,
+  `roleType` из `RoleAssignmentRoleType`).
+* Сервисы, которые читают через `DataManager` от имени пользователя:
+  `HoursReportService`, `MonthClosingService`, `TaskSupport`,
+  `TimeEntrySupport`, `TimeEntryEventListener`, `MainView` (счётчик
+  отклонённых). Правила списаний (`TimeEntryRulesListener`) и закрытие
+  проекта (`ProjectClosingListener`) уже на `UnconstrainedDataManager`: дневной
+  лимит считает все списания, а не видимые.
+* Закрытие месяца — действие `closeMonthAction` в `ProjectListView`, вызывает
+  `MonthClosingService.closeMonth`.
+
+== Роли
+
+Все resource-роли — `scope = SecurityScope.UI`, пакет `security`.
+
+=== `TimesheetsBaseRole` (`ts-base`)
+
+Общее для всех трёх, отдельно не назначается (входит в остальные через
+наследование интерфейса).
+
+* Наследует `UiMinimalRole`.
+* Экраны и меню: «My time entries» (`TimeEntries.my`), «My week»
+  (`TimeEntries.myWeek`), «My tasks» (`Tasks.my`), «Tasks simple»
+  (`ts_Task.list-simple`), форма списания (`ts_TimeEntry.detail`), выбор
+  задачи (`ts_Task.lookup`), список и форма проекта (`ts_Project.list`,
+  `ts_Project.detail`), только чтение.
+* Сущности:
+** `TimeEntry` — CRUD, атрибуты `*` MODIFY, кроме `billingRecordId` (VIEW);
+   статус и причина ограничиваются в форме (см. «Согласование»);
+** `Task`, `TaskType`, `ProjectRole`, `ProjectParticipant` — READ, атрибуты
+   VIEW;
+** `Project` — READ без атрибутов (атрибуты задают роли ниже);
+** `User` — READ, атрибуты `username`, `firstName`, `lastName`, `email` VIEW
+   (имена в гридах и участниках, без пароля и служебных полей).
+
+=== «Сотрудник» — `EmployeeRole` (`employee`)
+
+* Наследует `TimesheetsBaseRole`.
+* `Project` — атрибуты `*` VIEW.
+* `Client` — READ, атрибуты `name` VIEW: имя клиента видно в проекте.
+  Экранов клиентов нет.
+
+Названия ролей в UI английские, как весь интерфейс: «Employee», «Contractor»,
+«Project manager», «Month closing», «Timesheets: base».
+
+=== «Подрядчик» — `ContractorRole` (`contractor`)
+
+* Наследует `TimesheetsBaseRole`.
+* `Project` — атрибуты VIEW все, кроме `description` и `client`
+  (перечислены явно).
+* `Client` — READ *без атрибутов*. Форма проекта загружает список клиентов
+  для своего поля, и без права на чтение сущности загрузка падала бы. Ни
+  одного атрибута клиента подрядчик при этом не видит.
+* Политики объединяются через OR, поэтому подрядчик не наследует
+  «Сотрудника» и не «вычитает» из него, а собирает свой набор атрибутов.
+
+=== «Руководитель проекта» — `ProjectManagerRole` (`project-manager`)
+
+* Наследует `EmployeeRole`.
+* Экраны и меню: «Tasks» (`ts_Task.list`), форма задачи (`ts_Task.detail`),
+  форма участника (`ts_ProjectParticipant.detail`), «Time entries»
+  (`ts_TimeEntry.list`).
+* `Task`, `ProjectParticipant` — CRUD, атрибуты MODIFY. В каких проектах
+  — решает row-level роль ниже.
+* `Project` — READ и *UPDATE*, атрибуты по-прежнему VIEW. Отличие от
+  черновика: `StandardDetailView` открывает форму только для чтения, если
+  `UPDATE` запрещён (в том числе in-memory политикой). Задачи и участники
+  сохраняются кнопкой «Save» формы проекта, поэтому форма должна быть
+  редактируемой. Поля самого проекта остаются только для просмотра, а
+  predicate-политика `UPDATE` на `Project` в `project-manager-rows` оставляет
+  форму редактируемой только в проектах, где пользователь manager.
+
+=== Закрытие месяца — `MonthClosingRole` (`month-closing`)
+
+* Только `@SpecificPolicy(resources = "ts.monthClosing.close")` плюс
+  `ts_Project.list` и меню (вопрос 3).
+* В `ProjectListView` действие `closeMonthAction` доступно, если
+  `accessManager.applyRegisteredConstraints(new
+  SpecificOperationAccessContext("ts.monthClosing.close")).isPermitted()`.
+  Это проверка политики, а не роли: без политики действие скрыто.
+* `MonthClosingService.closeMonth` проверяет ту же политику в начале и
+  бросает `AccessDeniedException`. Под row-level ролью сервис видел бы
+  только часть одобренных списаний, поэтому чтение и запись в нём
+  переходят на `UnconstrainedDataManager` (вопрос 3).
+
+== Row-level роли
+
+=== `ProjectParticipationRowLevelRole` (`project-participation`)
+
+Назначается всем трём ролям. JPQL, READ:
+
+* `Project`: `exists (select p from ts_ProjectParticipant p where p.project
+  = {E} and p.user.id = :current_user_id)`;
+* `Task`: то же для `{E}.project`;
+* `ProjectParticipant`: участники проектов, где участвую я
+  (`{E}.project` с моим участием) — чтобы видеть состав своих проектов.
+
+=== Списания: `OwnTimeEntriesRowLevelRole` (`own-time-entries`) и `ManagedTimeEntriesRowLevelRole` (`managed-time-entries`)
+
+Политики на одну сущность объединяются через AND, поэтому у каждого
+пользователя ровно *одна* из двух ролей для `TimeEntry`:
+
+* `own-time-entries` — сотруднику и подрядчику: `{E}.user.id =
+  :current_user_id or exists (... p.project = {E}.task.project and p.user.id
+  = :current_user_id and p.projectRole.type = 'approver')`. Свои списания и
+  списания проектов, где он approver (чтобы согласовывать);
+* `managed-time-entries` — руководителю: то же, но тип роли `in ('manager',
+  'approver')`.
+
+Так «Сотрудник», который по участию числится manager (в демо chen и dana),
+чужих списаний не видит: роль в системе важнее записи об участии.
+
+=== `ProjectManagerRowLevelRole` (`project-manager-rows`)
+
+Только руководителям.
+
+* `Project` — predicate `UPDATE`, только где текущий пользователь manager
+  (см. форму проекта выше).
+
+Predicate, `CREATE`, `UPDATE`, `DELETE`:
+
+* `Task` — разрешено, если текущий пользователь — участник проекта задачи
+  с типом роли `MANAGER`;
+* `ProjectParticipant` — то же для проекта участника.
+
+Найдено в Gate 3: в форме чужого проекта (только для чтения) гриды
+«Participants» и «Tasks» оставляли «Create» и «Remove» включёнными. Jmix
+выключает действия в `ReadOnlyViewsSupport.setViewReadOnly` только у уже
+созданных компонентов, а эти гриды создаются при первом выборе ленивой
+вкладки. `ProjectDetailView.applyReadOnlyState` применяет то же правило
+(`AdjustWhenViewReadOnly`) к гриду при его создании. Сохранить такую задачу
+было нельзя и раньше: `Save` формы выключен, а сервер отклоняет `CREATE`
+(`RolesTest.managerCreatesTasksAndParticipantsOnlyInManagedProjects`).
+
+Проверка участия — через `UnconstrainedDataManager` в бине
+`ProjectAccessSupport` (`isManager`, `isManagerOfProjectOf`, `canApprove`,
+`isPermitted`), им же пользуются форма списания и список проектов. Ссылка
+`project` у задачи или участника может отсутствовать в fetch plan грида
+(удаление из грида), тогда id проекта читается из базы.
+
+== Согласование в форме списания
+
+* `TimeEntryDetailView`: поля `statusField` и `rejectionReasonField` только
+  для чтения, если текущий пользователь не `MANAGER` и не `APPROVER` проекта
+  задачи этого списания (`ProjectAccessSupport`). Проверка при открытии и
+  при смене задачи.
+* Своё списание руководитель или approver тоже не согласует (вопрос 1):
+  поля недоступны, если `entry.user` — текущий пользователь.
+* Руководитель по участию без роли «Руководитель проекта» (в демо chen,
+  dana) чужих списаний не видит, поэтому и не согласует их.
+* admin обычно не участник проектов, и без исключения поля блокировались бы
+  и у него. Исключение — специфическая политика `ts.timeEntry.approveAny`:
+  её даёт `@SpecificPolicy(resources = "*")` в `FullAccessRole`, у новых ролей
+  её нет. Это проверка политики, а не роли (вопрос 4).
+* Переходы статусов, обязательная причина отклонения и прочие правила
+  01/05 остаются в `TimeEntryRulesListener`.
+
+== Экраны по ролям
+
+[cols="3,1,1,1,1",options="header"]
+|===
+| Экран (id) | Сотрудник | Подрядчик | Руководитель | только admin
+| My time entries (`TimeEntries.my`) | + | + | + |
+| My week (`TimeEntries.myWeek`) | + | + | + |
+| My tasks (`Tasks.my`) | + | + | + |
+| Tasks simple (`ts_Task.list-simple`) | + | + | + |
+| Форма списания (`ts_TimeEntry.detail`), выбор задачи (`ts_Task.lookup`) | + | + | + |
+| Projects (`ts_Project.list`), форма проекта (`ts_Project.detail`) | чтение | чтение без описания и клиента | чтение, правка вкладок |
+| Tasks (`ts_Task.list`), форма задачи (`ts_Task.detail`) | | | + |
+| Форма участника (`ts_ProjectParticipant.detail`) | | | + |
+| Time entries (`ts_TimeEntry.list`) | | | + |
+| Project cards (`Projects.cards`) | | | | +
+| Hours report (`ts_HoursReportView`), Billing records (`ts_BillingRecord.list`) | | | | +
+| Clients (`ts_Client.list`, `.detail`, `.lookup`) | | | | +
+| Users (`ts_User.list`, `.detail`), Task types, Project roles | | | | +
+| Блокировки (`pslock_LockInfo.list`, `TsPessimisticLockListView`) и всё «Administration» | | | | +
+|===
+
+«только admin» значит: ни одна из новых ролей их не даёт, они есть только у
+`FullAccessRole`. Причина для сводок: под row-level ролью суммы
+`HoursReportService` считались бы по видимым записям, а клиент на карточке
+проекта берётся из DTO `ProjectSummary`, и запрет атрибута `Project.client`
+его не спрячет.
+
+`ProjectListView`: переключатель «Только мои проекты» для сотрудников
+теперь ничего не меняет (row-level уже оставляет свои). Не убираю: у admin
+он работает.
+
+== Тестовые пользователи
+
+В `DemoDataSeeder` — отдельный шаг `ensureRoles()`, который выполняется *при
+каждом старте* (не только на пустой базе) и ничего не меняет, если
+назначение уже есть:
+
+* назначения (вопрос 2):
+** alice, boris — «Руководитель проекта» + `project-participation` +
+   `managed-time-entries` + `project-manager-rows`;
+** chen, dana — «Сотрудник» + `project-participation` + `own-time-entries`;
+** новый erik («Erik Svensson», пароль `password`) — «Подрядчик» +
+   `project-participation` + `own-time-entries`; участник `Developer` в
+   «Website Redesign» и «Mobile App»;
+* всем, кроме admin, — `ui-minimal` уже входит через наследование.
+
+Итоговая картина по участию: alice — manager «Website Redesign», approver
+«Mobile App» и «Legacy Support»; boris — manager «CRM Integration»; chen и
+dana — manager «Data Migration» и «Mobile App» по участию, но с ролью
+«Сотрудник» не правят задачи и не видят чужие списания: это видно в демо.
+
+`MonthClosingRole` никому из демо не назначается: закрывает месяц admin.
+
+== Тесты
+
+`RolesTest` (`@SpringBootTest`), пользователи и назначения создаются в
+тесте (сидер в профиле `test` выключен), удаляются в `@AfterEach`. Всё от
+лица пользователя через `systemAuthenticator.withUser(...)` и обычный
+`DataManager`:
+
+* сотрудник: видит только проекты и задачи, где участвует; видит только
+  свои списания, чужие в том же проекте — нет;
+* руководитель (manager проекта A): видит списания всех участников A, не
+  видит чужие списания проекта B, где он member; правит задачу в A,
+  сохранение задачи в B отклоняется (`AccessDeniedException` или
+  `EntityAccessException`, проверяю, что именно бросает Jmix);
+* approver проекта с ролью «Сотрудник» видит чужие списания этого проекта,
+  а manager по участию с ролью «Сотрудник» — нет;
+* подрядчик: `AccessManager` с `EntityAttributeContext` на
+  `Project.description` и `Project.client` — нет доступа на просмотр;
+* `ts.monthClosing.close`: сотрудник и руководитель — нет, пользователь с
+  `month-closing` — есть; `closeMonth` от сотрудника —
+  `AccessDeniedException`.
+
+`RolesUiTest` (`@UiTest`, от лица пользователя):
+
+* форма списания: у сотрудника `statusField` только для чтения; у
+  руководителя проекта на чужом списании — доступен; на своём — нет;
+* подрядчик в форме проекта: полей описания и клиента нет
+  (`isVisible() == false`);
+* сотрудник: переход на `ts_Client.list` запрещён (проверка через
+  `UiAccessChecker`/`AccessManager`, без навигации).
+
+== Кто что делает
+
+* Я: роли, `ProjectAccessSupport`, правки `TimeEntryDetailView`,
+  `ProjectListView`, `MonthClosingService`, сидер, тесты.
+* Studio: ничего. Сущностей и колонок нет, changelog не нужен. Роли и
+  назначения — код и строки `sec_role_assignment`.
+* Ничего не коммичу.
+
+== Решения по ревью
+
+. Самосогласования нет: своё списание руководитель и approver не согласуют.
+. Демо: alice, boris — руководители; chen, dana — сотрудники; erik —
+  подрядчик.
+. Закрытие месяца — роль `month-closing`, сервис проверяет политику и
+  работает через `UnconstrainedDataManager`.
+. admin остаётся с полным доступом: согласует любое списание через
+  `ts.timeEntry.approveAny`, которую даёт `*` в `FullAccessRole`.
+
+== Критерии приёмки
+
+. В «Resource roles» есть «Сотрудник», «Руководитель проекта»,
+  «Подрядчик», «Закрытие месяца» со scope UI; в «Row-level roles» —
+  `project-participation`, `own-time-entries`, `managed-time-entries`,
+  `project-manager-rows`.
+. chen («Сотрудник») видит в меню только «My time entries», «My week», «My
+  tasks», «Tasks simple», «Projects». В «Projects» — только проекты, где он
+  участник; чужих списаний нигде не видит.
+. alice («Руководитель») в «Time entries» видит списания всех участников
+  своих manager/approver-проектов и только свои в остальных; в форме
+  проекта «Website Redesign» добавляет задачу и участника, в «CRM
+  Integration» (где она observer) — нет.
+. В форме чужого списания своего проекта alice меняет статус и причину
+  отклонения; chen в своём списании статус не меняет.
+. erik («Подрядчик») в форме проекта не видит описание и клиента.
+. «Close month» в списке проектов виден только пользователю с политикой
+  `ts.monthClosing.close`; у остальных его нет.
+. «Project cards», отчёт по часам, биллинг, клиенты, пользователи и
+  «Administration» доступны только admin.
+. После старта приложения на существующей `ts_live` у демо-пользователей
+  есть назначения ролей, erik создан и участвует в двух проектах.
+. `gradle clean test` зелёный, включая `RolesTest` и `RolesUiTest`.

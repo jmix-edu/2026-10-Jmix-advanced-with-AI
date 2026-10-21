@@ -1,5 +1,6 @@
 package com.company.timesheets.view.timeentry;
 
+import com.company.timesheets.service.ProjectAccessSupport;
 import com.company.timesheets.service.TaskSupport;
 import com.company.timesheets.entity.Task;
 import com.company.timesheets.entity.TimeEntry;
@@ -14,6 +15,7 @@ import io.jmix.core.MetadataTools;
 import io.jmix.core.usersubstitution.CurrentUserSubstitution;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.component.combobox.EntityComboBox;
+import io.jmix.flowui.component.select.JmixSelect;
 import io.jmix.flowui.component.textarea.JmixTextArea;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
 import io.jmix.flowui.model.InstanceContainer;
@@ -41,6 +43,10 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     private JmixTextArea rejectionReasonField;
     @ViewComponent
     private Span statusBadge;
+    @ViewComponent
+    private JmixSelect<TimeEntryStatus> statusField;
+    @Autowired
+    private ProjectAccessSupport projectAccessSupport;
     @Autowired
     private MetadataTools metadataTools;
     @Autowired
@@ -106,6 +112,7 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     public void onTimeEntryDcItemChange(final InstanceContainer.ItemChangeEvent<TimeEntry> event) {
         updateRejectionReasonField();
         updateStatusBadge();
+        updateApprovalFields();
     }
 
     @Subscribe(id = "timeEntryDc", target = Target.DATA_CONTAINER)
@@ -123,6 +130,17 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
         if ("task".equals(event.getProperty()) && !ownTimeEntry) {
             userField.setReadOnly(getEditedEntity().getTask() != null);
         }
+        if ("task".equals(event.getProperty()) || "user".equals(event.getProperty())) {
+            updateApprovalFields();
+        }
+    }
+
+    // Согласует и отклоняет руководитель или approver проекта, и не своё списание (спека 03/01).
+    // Роли это не выражают: решает участие в проекте, его проверяет ProjectAccessSupport.
+    private void updateApprovalFields() {
+        boolean denied = !projectAccessSupport.canApprove(getEditedEntity());
+        statusField.setReadOnly(denied || isReadOnly());
+        rejectionReasonField.setReadOnly(denied || isReadOnly());
     }
 
     private void updateRejectionReasonField() {

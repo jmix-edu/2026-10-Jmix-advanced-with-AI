@@ -5,8 +5,10 @@ import com.company.timesheets.datatype.SpentTimeDatatype;
 import com.company.timesheets.entity.BillingRecord;
 import com.company.timesheets.entity.Project;
 import com.company.timesheets.listener.TimeEntryRuleException;
+import com.company.timesheets.security.TimesheetsPolicies;
 import com.company.timesheets.service.MonthClosingLockedException;
 import com.company.timesheets.service.MonthClosingService;
+import com.company.timesheets.service.ProjectAccessSupport;
 import com.company.timesheets.view.main.MainView;
 import com.vaadin.flow.component.AbstractField;
 import com.vaadin.flow.router.Route;
@@ -58,6 +60,15 @@ public class ProjectListView extends StandardListView<Project> {
     private Notifications notifications;
     @Autowired
     private MonthClosingService monthClosingService;
+    @Autowired
+    private ProjectAccessSupport projectAccessSupport;
+
+    // «Close month» only with the month-closing policy (spec 03/01); the service checks it again.
+    @Subscribe
+    public void onInit(final InitEvent event) {
+        projectsDataGrid.getAction("closeMonthAction")
+                .setVisible(projectAccessSupport.isPermitted(TimesheetsPolicies.MONTH_CLOSING));
+    }
 
     @Subscribe("onlyMyProjectsField")
     public void onOnlyMyProjectsFieldComponentValueChange(

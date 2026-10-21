@@ -197,9 +197,13 @@ Studio подхватывает такие интерфейсы при инде�
 
 * Своё правило только для раскладки частей:
   `themes/timesheets-aura/view/spent-time-field.css`,
-  `.spent-time-field-parts { display: flex; gap: var(--vaadin-gap-s);
-  align-items: baseline; }`, ширина числовых полей — `width` в
-  `em`, без цветов. Подключение — `@import` в `styles.css`.
+  `.spent-time-field-parts { display: flex; flex-wrap: wrap; gap:
+  var(--vaadin-gap-s); align-items: baseline; }`. Подключение — `@import` в
+  `styles.css`.
+* Ширину числовых полей не задаём. Найдено в Gate 3: при `width: 7em` у
+  поля минут стрелки и суффикс «min» съедали место под число, и казалось,
+  что стрелки не работают. Поле стоит в форме с `colspan="2"`, чтобы части
+  помещались в строку; на узком экране они переносятся.
 * Цвета, рамки, ошибка и фокус — от стандартных `vaadin-integer-field`,
   `vaadin-button` и `vaadin-custom-field`. Поэтому светлая и тёмная схемы
   работают так же, как у соседних полей формы.
@@ -244,7 +248,7 @@ Studio подхватывает такие интерфейсы при инде�
 == Критерии приёмки
 
 . В `time-entry-detail-view.xml` вместо `textField` стоит
-  `<ts:spentTimeField property="spentTime"/>`. Форма списания и диалог
+  `<ts:spentTimeField property="spentTime" colspan="2"/>`. Форма списания и диалог
   «Моей недели» показывают часы, минуты и кнопки «+0:15», «+1:00».
 . Стрелки минут шагают по 15, ввод с клавиатуры принимает 0–59. Кнопки
   прибавляют время с переносом минут в часы.

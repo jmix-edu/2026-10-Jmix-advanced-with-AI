@@ -14,11 +14,20 @@ import com.company.timesheets.entity.TaskType;
 import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.entity.User;
+import com.company.timesheets.security.ContractorRole;
+import com.company.timesheets.security.EmployeeRole;
+import com.company.timesheets.security.ManagedTimeEntriesRowLevelRole;
+import com.company.timesheets.security.OwnTimeEntriesRowLevelRole;
+import com.company.timesheets.security.ProjectManagerRole;
+import com.company.timesheets.security.ProjectManagerRowLevelRole;
+import com.company.timesheets.security.ProjectParticipationRowLevelRole;
 import com.company.timesheets.service.MonthClosingService;
 import io.jmix.core.DataManager;
 import io.jmix.core.SaveContext;
 import io.jmix.core.security.SystemAuthenticator;
 import io.jmix.data.PersistenceHints;
+import io.jmix.security.role.assignment.RoleAssignmentRoleType;
+import io.jmix.securitydata.entity.RoleAssignmentEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -46,6 +55,7 @@ public class DemoDataSeeder {
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
 
     private static final String DEMO_PASSWORD = "password";
+    private static final String CONTRACTOR = "erik";
 
     private final DataManager dataManager;
     private final SystemAuthenticator systemAuthenticator;
@@ -64,18 +74,96 @@ public class DemoDataSeeder {
     public void onApplicationReady() {
         // Startup has no logged-in user; DataManager needs an authentication.
         systemAuthenticator.runWithSystem(() -> {
-            if (!isEmpty()) {
-                return;
+            // Demo data must not prevent the application from starting.
+            if (isEmpty()) {
+                log.info("Database has only admin, creating demo data");
+                try {
+                    seed();
+                    log.info("Demo data created");
+                } catch (RuntimeException e) {
+                    log.error("Failed to create demo data", e);
+                }
             }
-            log.info("Database has only admin, creating demo data");
             try {
-                seed();
-                log.info("Demo data created");
+                ensureRoles();
             } catch (RuntimeException e) {
-                // Demo data must not prevent the application from starting.
-                log.error("Failed to create demo data", e);
+                log.error("Failed to assign demo roles", e);
             }
         });
+    }
+
+    /**
+     * Runs on every start, also on a database seeded before the roles existed (spec 03/01): adds the contractor
+     * and the role assignments that are missing, changes nothing that is already there.
+     */
+    private void ensureRoles() {
+        ensureContractor();
+        List<String> managerRoles = List.of(ProjectManagerRole.CODE);
+        List<String> managerRows = List.of(ProjectParticipationRowLevelRole.CODE,
+                ManagedTimeEntriesRowLevelRole.CODE, ProjectManagerRowLevelRole.CODE);
+        List<String> employeeRows = List.of(ProjectParticipationRowLevelRole.CODE, OwnTimeEntriesRowLevelRole.CODE);
+        assignRoles("alice", managerRoles, managerRows);
+        assignRoles("boris", managerRoles, managerRows);
+        assignRoles("chen", List.of(EmployeeRole.CODE), employeeRows);
+        assignRoles("dana", List.of(EmployeeRole.CODE), employeeRows);
+        assignRoles(CONTRACTOR, List.of(ContractorRole.CODE), employeeRows);
+    }
+
+    private void ensureContractor() {
+        if (findUser(CONTRACTOR) != null) {
+            return;
+        }
+        ProjectRole developer = dataManager.load(ProjectRole.class)
+                .query("select r from ts_ProjectRole r where r.type = :type order by r.name")
+                .parameter("type", ProjectRoleType.MEMBER)
+                .maxResults(1)
+                .optional().orElse(null);
+        List<Project> projects = dataManager.load(Project.class)
+                .query("select p from ts_Project p where p.name in :names")
+                .parameter("names", List.of("Website Redesign", "Mobile App"))
+                .list();
+        if (developer == null || projects.isEmpty()) {
+            log.info("No demo projects for the contractor, skipping");
+            return;
+        }
+        User erik = user(CONTRACTOR, "Erik", "Svensson");
+        projects.forEach(project -> participants(project, erik, developer));
+        log.info("Demo contractor '{}' created", CONTRACTOR);
+    }
+
+    private void assignRoles(String username, List<String> resourceRoles, List<String> rowLevelRoles) {
+        if (findUser(username) == null) {
+            return;
+        }
+        resourceRoles.forEach(code -> assignRole(username, code, RoleAssignmentRoleType.RESOURCE));
+        rowLevelRoles.forEach(code -> assignRole(username, code, RoleAssignmentRoleType.ROW_LEVEL));
+    }
+
+    private void assignRole(String username, String roleCode, String roleType) {
+        boolean assigned = dataManager.load(RoleAssignmentEntity.class)
+                .query("select a from sec_RoleAssignmentEntity a"
+                        + " where a.username = :username and a.roleCode = :roleCode and a.roleType = :roleType")
+                .parameter("username", username)
+                .parameter("roleCode", roleCode)
+                .parameter("roleType", roleType)
+                .maxResults(1)
+                .optional().isPresent();
+        if (assigned) {
+            return;
+        }
+        RoleAssignmentEntity assignment = dataManager.create(RoleAssignmentEntity.class);
+        assignment.setUsername(username);
+        assignment.setRoleCode(roleCode);
+        assignment.setRoleType(roleType);
+        dataManager.saveWithoutReload(assignment);
+        log.info("Role '{}' assigned to '{}'", roleCode, username);
+    }
+
+    private User findUser(String username) {
+        return dataManager.load(User.class)
+                .query("select u from ts_User u where u.username = :username")
+                .parameter("username", username)
+                .optional().orElse(null);
     }
 
     private boolean isEmpty() {

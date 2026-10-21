@@ -1,0 +1,36 @@
+/* Public dashboard: figures and charts in an adaptive grid, one column on a narrow screen.
+   The minimum widths are layout; colors, spacing, radii and shadows come from theme tokens.
+   Charts are drawn by ECharts on a canvas and take the dark theme from the <html theme> attribute. */
+.public-dashboard {
+    padding: var(--vaadin-padding-l);
+    gap: var(--vaadin-gap-l);
+}
+
+.public-dashboard-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    gap: var(--vaadin-gap-m);
+}
+
+.public-dashboard-figure {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vaadin-gap-xs);
+    padding: var(--vaadin-padding-m);
+    border: 1px solid var(--vaadin-border-color-secondary);
+    border-radius: var(--vaadin-radius-m);
+    background: var(--aura-surface-color);
+    color: var(--vaadin-text-color-secondary);
+}
+
+.public-dashboard-figure-value {
+    font-size: var(--aura-font-size-xl);
+    font-weight: var(--aura-font-weight-semibold);
+    color: var(--vaadin-text-color);
+}
+
+.public-dashboard-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
+    gap: var(--vaadin-gap-l);
+}

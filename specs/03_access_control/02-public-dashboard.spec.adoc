@@ -1,0 +1,173 @@
+= 03_access_control / 02 — Публичный дашборд по проектам
+:toc:
+:status: реализована, ждёт Gate 3
+
+== Цель
+
+Страница со сводкой по проектам открывается без входа: несколько цифр и
+графики часов. Анонимный посетитель видит только агрегаты, без клиентов,
+сотрудников и описаний. Никаких прав на сущности ему не выдаётся.
+
+== В области
+
+* Экран `PublicDashboardView` без входа и без главного меню.
+* Сервис агрегатов `PublicDashboardService` и DTO для графиков.
+* Графики аддона Charts (`jmix-charts-flowui-starter`, ставит автор).
+* Роль анонимного пользователя: только этот экран.
+* Тесты от лица анонимного пользователя.
+
+== Вне области
+
+* Кэширование агрегатов и защита от частых запросов.
+* Встраивание дашборда на чужие сайты (iframe, CORS).
+* Права вошедших пользователей (спека 03/01): дашборд им тоже доступен,
+  но ничего нового не даёт.
+* Свои цвета графиков: палитра ECharts по умолчанию.
+
+== Что уже есть
+
+Проверено по коду проекта и исходникам Jmix 3.0.2 и Charts 3.0.0 (в кэше
+Gradle; 3.0.2 появится после установки аддона):
+
+* *Доступ к экрану* (`UiAccessChecker.isViewPermitted`): экран открыт, если
+  на классе есть `@AnonymousAllowed` (Vaadin `AccessAnnotationChecker`)
+  *или* у текущего пользователя есть `@ViewPolicy` на него. До входа текущий
+  пользователь — встроенный `anonymous` (`AbstractDatabaseUserRepository`),
+  его роли задаёт `DatabaseUserRepository.initAnonymousUser`.
+* Автор уже начал: `AnonymousRole` (`anonymous`, scope UI) выдаётся
+  анонимному пользователю в `initAnonymousUser`. Сейчас в ней чтение всех
+  атрибутов `Project` и `Task`, экран «Tasks simple» и `ts_MainView`. Это
+  черновик, его судьба — вопрос 3.
+* Агрегаты по часам уже считает `HoursReportService`, но через `DataManager`
+  от имени пользователя. Под анонимом без прав на сущности он ничего не
+  загрузит, а выдавать анониму чтение `TimeEntry` — значит открыть
+  содержимое списаний. Поэтому агрегаты считает отдельный сервис через
+  `UnconstrainedDataManager` и наружу отдаёт только числа и названия.
+* Графики (`ui.xsd` аддона, пространство имён
+  `http://jmix.io/schema/charts/ui`): `<charts:chart>` с `<dataSet><source
+  dataContainer categoryField valueFields/></dataSet>`, `<xAxes>`, `<yAxes>`,
+  `<series>` с `bar`, `line`, `pie` и др., `<legend>`, `<tooltip>`.
+* Тёмная схема: `jmix-chart.js` следит за атрибутом `theme` у `<html>` и
+  при `dark` пересоздаёт ECharts с темой `dark`. Атрибут ставит скрипт
+  `color-scheme-switching-support.js`, он уже подключён (спека 02/03).
+  ECharts рисует на canvas и CSS-переменные не понимает, поэтому
+  `--aura-*` в графики не передаём.
+* Часы считаются как в отчётах: только `APPROVED` и `CLOSED`
+  (`HoursReportService.COUNTED_STATUSES`).
+
+== Экран
+
+`PublicDashboardView`, `@Route("public/dashboard")` *без* `layout =
+MainView.class`: у анонима нет меню, главный экран ему не нужен. Id
+`ts_PublicDashboardView`.
+
+Сверху вниз:
+
+. Заголовок «Projects at a glance» и ссылка «Sign in» на `ts_LoginView`.
+. Три цифры: открытых проектов, часов за текущий месяц, часов за прошлый
+  месяц (`ч:мм`).
+. Графики, сетка как у карточек проектов (`auto-fill`, одна колонка на
+  узком экране):
+** *Часы по проектам за текущий месяц* — горизонтальный `bar`, открытые
+   проекты, по убыванию;
+** *Часы по месяцам* — `line` за последние 12 месяцев, все проекты вместе;
+** *Часы по типам задач за текущий месяц* — `pie`.
+
+Данные — три `collection`-контейнера DTO с `loadDelegate` из
+`PublicDashboardService`. Обновление — при открытии страницы, кнопки
+«Обновить» нет (F5).
+
+После входа пользователь уже не аноним, и роли анонима у него нет. Чтобы
+страница открывалась и ему, `ts_PublicDashboardView` добавляется в
+`@ViewPolicy` роли `ts-base` (admin видит её через `*`). Пункт меню
+«Dashboard» в группе «Projects» — вопрос 4.
+
+== Данные
+
+`PublicDashboardService` (пакет `service`), только `UnconstrainedDataManager`,
+только агрегаты:
+
+* `summary()` → `DashboardSummary` (record): `openProjects`, `currentMonth`,
+  `lastMonth` (`SpentTime`);
+* `hoursByProject(YearMonth)` → `List<DashboardValue>`: имя проекта и часы,
+  только `OPEN`, без нулей;
+* `hoursByMonth(int months)` → `List<DashboardValue>`: «2026-10» и часы, все
+  месяцы подряд, пустые — ноль;
+* `hoursByTaskType(YearMonth)` → `List<DashboardValue>`.
+
+`DashboardValue` — DTO-сущность (`@JmixEntity`, не JPA): `id` (UUID),
+`label` (String), `hours` (BigDecimal, часы с двумя знаками). Графику нужно
+число, а не `SpentTime`. Сущность нужна, потому что источник данных графика
+— контейнер.
+
+Что *не* попадает на страницу: клиенты, сотрудники, описания проектов и
+задач, отдельные списания, суммы биллинга (вопрос 1).
+
+== Анонимный доступ
+
+* `AnonymousRole` становится такой (вопрос 3):
+** `@ViewPolicy(viewIds = "ts_PublicDashboardView")`;
+** `@EntityPolicy(entityClass = DashboardValue.class, actions = READ)` и
+   атрибуты VIEW: если Jmix проверяет права на DTO в контейнере, иначе
+   лишнее, уберу по результатам проверки;
+** ни одной политики на JPA-сущности, ни `ts_MainView`, ни «Tasks simple».
+* `@AnonymousAllowed` на экран *не* ставлю: доступ задаётся ролью, как у
+  остальных экранов, и виден в «Resource roles».
+* Остальное приложение для анонима как сейчас: любой другой адрес ведёт на
+  вход.
+
+== Тесты
+
+`PublicDashboardTest` (`@SpringBootTest`). Аноним в тесте — как в
+приложении: `AnonymousAuthenticationToken` с ключом
+`CoreProperties.getAnonymousAuthenticationTokenKey()`, пользователем
+`userRepository.getAnonymousUser()` и его ролями, в `SecurityContext` на
+время проверки.
+
+* сервис от анонима возвращает агрегаты: часы по проекту за месяц равны
+  сумме `APPROVED` и `CLOSED` списаний тестовых данных, `NEW` и `REJECTED` не
+  входят; закрытого проекта нет в `hoursByProject`;
+* в `hoursByMonth(12)` двенадцать месяцев подряд, у пустых ноль;
+* аноним через обычный `DataManager` не читает `Project`, `TimeEntry`,
+  `Client`, `User` (`AccessDeniedException` или пустой результат — проверю,
+  что делает Jmix, и зафиксирую);
+* `UiShowViewContext`: аноним — `ts_PublicDashboardView` да,
+  `ts_MainView`, `ts_Project.list`, `ts_Task.list-simple` — нет.
+
+`PublicDashboardUiTest` (`@UiTest` от анонима): экран открывается, в трёх
+контейнерах есть данные тестовых проектов.
+
+Как выглядят графики и тёмная схема — Gate 3.
+
+== Кто что делает
+
+* Автор: аддон Charts (Studio или `build.gradle`), правки `AnonymousRole`
+  по итогам вопроса 3, если делает сам.
+* Я: экран и дескриптор, сервис, DTO, роль анонима (если поручено), сообщения,
+  CSS сетки, тесты.
+* Studio: changelog не нужен, сущностей БД нет.
+* Ничего не коммичу.
+
+== Решения по ревью
+
+. Названия проектов на странице показываем; клиентов, сотрудников и
+  описаний нет.
+. Часы — `APPROVED` и `CLOSED`, как в отчётах.
+. Доступы почищены: `AnonymousRole` — только `ts_PublicDashboardView`;
+  `@AnonymousAllowed`, которые автор пробовал на `MainView` и
+  `TaskListSimpleView`, убраны.
+. Пункт меню «Dashboard» в группе «Projects» для всех ролей (`ts-base`) и
+  admin.
+
+== Критерии приёмки
+
+. В приватном окне браузера `/public/dashboard` открывается без входа:
+  три цифры и три графика. Любой другой адрес по-прежнему ведёт на вход.
+. На странице нет клиентов, сотрудников, описаний и отдельных списаний.
+. Цифры совпадают с отчётом по часам за тот же месяц.
+. Графики читаются в светлой и тёмной схеме; на узком экране идут в одну
+  колонку.
+. В «Resource roles» у роли `anonymous` только экран дашборда (и DTO, если
+  понадобится), без JPA-сущностей.
+. `gradle clean test` зелёный, включая `PublicDashboardTest` и
+  `PublicDashboardUiTest`.

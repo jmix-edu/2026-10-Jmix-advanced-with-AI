@@ -25,7 +25,12 @@ public class DatabaseUserRepository extends AbstractDatabaseUserRepository<User>
         systemUser.setAuthorities(authorities);
     }
 
+    // Before signing in: only the public dashboard (spec 03/02).
     @Override
     protected void initAnonymousUser(final User anonymousUser) {
+        final Collection<GrantedAuthority> authorities = getGrantedAuthoritiesBuilder()
+                .addResourceRole(AnonymousRole.CODE)
+                .build();
+        anonymousUser.setAuthorities(authorities);
     }
 }
