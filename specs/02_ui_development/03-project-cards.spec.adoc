@@ -1,0 +1,232 @@
+= 02_ui_development / 03 — Карточки проектов и оформление на Aura
+:toc:
+:status: реализована, ждёт Gate 3
+
+== Цель
+
+Менеджер видит проекты карточками: что открыто, сколько часов за месяц, кто
+участвует. Отклонённые списания заметны в гридах сразу. Пользователь сам
+выбирает светлую или тёмную схему. Оформление держится на токенах темы Aura
+и одинаково работает в обеих схемах.
+
+== В области
+
+* Экран «Проекты карточками» (`ProjectCardsView`).
+* Выделение строк `REJECTED` в трёх гридах списаний.
+* Бейдж статуса в форме списания.
+* Переключатель светлой и тёмной схемы в меню пользователя.
+* CSS в теме проекта, ключи сообщений.
+
+== Вне области
+
+* Свои компоненты (следующая спека). Карточка здесь — стандартный
+  `card` Jmix (`vaadin-card`), собранный в контроллере, не отдельный
+  компонент.
+* Права (M3).
+* Карточки клиентов: их делает автор руками. Мои правила лежат в
+  отдельных CSS-файлах, чтобы не пересекаться с его правками в
+  `timesheets.css`.
+* Гриды, где списаний нет, и отчёт по часам.
+
+== Что уже есть
+
+Проверено по коду проекта и jar-ам Vaadin Aura 25.1 и Jmix 3.0.2:
+
+* Тема — Aura: `@StyleSheet(Aura.STYLESHEET)`, `JmixAura.STYLESHEET` и
+  `themes/timesheets-aura/styles.css` в `TimesheetsApplication`. Токены —
+  `--aura-*` и `--vaadin-*`, `--lumo-*` не работают.
+* Все данные для карточки уже считает
+  `HoursReportService.loadProjectSummaries()`: DTO `ProjectSummary` с
+  проектом, клиентом, статусом, `currentMonthTime` и `participantCount`. Его
+  использует отчёт по часам. Часы считаются только в статусах `APPROVED` и
+  `CLOSED` (`COUNTED_STATUSES`), месяц — с 1-го числа по сегодня (вопрос 1).
+* У Jmix есть `card` в XML и Vaadin `Card` (`vaadin-card`). Aura стилизует
+  у карточки темы `outlined`, `elevated`, `horizontal`, `cover-media`,
+  `stretch-media`. Отступы и радиусы карточки берутся из
+  `--vaadin-card-padding`, `--vaadin-padding-l`, `--vaadin-gap-*`, тень
+  `elevated` — `--aura-shadow-s`.
+* Бейдж Jmix под Aura (`theme="badge"`) — заливка `--aura-accent-color`,
+  текст `--aura-accent-contrast-color`. Цветных вариантов `success` и
+  `error` у него нет, только `contrast`, `primary`, `pill`, `small`. В
+  гридах списаний цвет уже задают классы `status-approved` и
+  `status-rejected` в `timesheets.css`: они переопределяют
+  `--aura-accent-color-light` и `-dark`. Тот же приём подходит для статуса
+  проекта.
+* `--aura-green`, `--aura-red` — константы oklch. `--aura-green-text`,
+  `--aura-red-text` — `light-dark(...)`, они сами подстраиваются под схему.
+  Отдельного токена «светлая красная заливка» в Aura нет.
+* Статус проекта в гриде уже красится через `partNameGenerator` колонки
+  (`open-project`, `closed-project`). Для строки целиком у `dataGrid` есть
+  такой же `partNameGenerator`.
+* В Jmix есть действие `userMenu_themeSwitch` (`UserMenuThemeSwitchAction`):
+  подменю «System», «Light», «Dark», выбор хранится в `localStorage`
+  (`jmix.app.theme`). Оно требует `@JsModule("./src/theme/
+  color-scheme-switching-support.js")` на классе приложения, иначе бросает
+  `IllegalStateException` при создании. Скрипт из `jmix-flowui-kit` ставит
+  `document.documentElement.style.colorScheme`, а на `color-scheme` и
+  `light-dark()` держится вся палитра Aura. В `main-view.xml` это действие
+  уже есть, но закомментировано — видимо, как раз из-за отсутствующего
+  `@JsModule`.
+
+== Экран «Проекты карточками»
+
+* `ProjectCardsView`, маршрут `project-cards`, id `Projects.cards`, пункт
+  меню в группе «Projects» сразу после «Projects». Заготовку («Blank view»)
+  может сделать Studio. Если удобнее, дай образец, повторю.
+* Данные: `collection` `projectSummariesDc` (`ProjectSummary`) с
+  `loadDelegate` → `hoursReportService.loadProjectSummaries()`.
+* Разметка: `div` с классом `project-cards`, в него контроллер кладёт по
+  карточке на проект при `CollectionChangeEvent` контейнера. Карточек
+  десятки, поэтому без пагинации и виртуализации.
+* Карточка (`Card`, тема `outlined`):
+** заголовок — имя проекта;
+** подзаголовок — клиент;
+** `headerSuffix` — бейдж статуса: `theme="badge"` плюс класс
+   `project-status-open` (зелёный) или `project-status-closed` (нейтральный),
+   текст — локализованное имя статуса;
+** содержимое — две строки «Hours this month: 12:30» и «Participants: 4»,
+   часы в формате `SpentTime` (`ч:мм`).
+* Клик по карточке открывает форму проекта:
+  `viewNavigators.detailView(this, Project.class).editEntity(project)
+  .withBackwardNavigation(true).navigate()`. Карточка доступна с
+  клавиатуры: `tabindex="0"`, Enter открывает так же, как клик.
+* Сетка: CSS grid в `project-cards.css`:
++
+[source,css]
+----
+.project-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: var(--vaadin-gap-m);
+}
+----
++
+На узком экране колонка одна: `min(100%, 18rem)` не даёт карточке быть
+шире экрана. `18rem` — ширина колонки, это раскладка, а не оформление;
+цвета, отступы, радиусы и тени — только токены.
+* Наведение и фокус: `cursor: pointer`, рамка
+  `--aura-accent-border-color` при `:hover` и `:focus-visible`.
+
+== Строки REJECTED в гридах списаний
+
+* Гриды: «Time entries» (`TimeEntryListView`), «My time entries»
+  (`MyTimeEntries`), «My week» (`MyWeekView`).
+* В каждом `@Install(to = "<grid>", subject = "partNameGenerator")`
+  возвращает `rejected-row` для `REJECTED`, иначе `null`.
+* В `time-entry-status.css`:
++
+[source,css]
+----
+html {
+    --ts-rejected-row-background: color-mix(in srgb, var(--aura-red) 12%, transparent);
+}
+
+vaadin-grid::part(rejected-row) {
+    background-color: var(--ts-rejected-row-background);
+}
+----
++
+Своё свойство заводится, потому что в Aura нет токена «светлая красная
+заливка». Цвет — токен `--aura-red`, доля смешивания живёт в одном месте.
+Подмешивание к прозрачному одинаково работает на светлом и тёмном фоне
+(вопрос 2).
+* Выбранная строка и строка под курсором остаются различимы: Aura рисует
+  выделение поверх фона строки. Это проверка Gate 3.
+
+== Бейдж статуса в форме списания
+
+* В форме нет своего заголовка. Заголовок рисует главный экран (при
+  навигации) или шапка диалога, и в обоих случаях это чужая разметка.
+  Поэтому бейдж ставится первой строкой формы, сразу под заголовком:
+  `hbox` с `span id="statusBadge"` над `formLayout` (вопрос 3).
+* Бейдж обновляется при открытии формы и при смене поля `status`.
+* Классы бейджа те же, что в гридах: `badge` (у `CLOSED` — `badge
+  contrast`), `status-approved`, `status-rejected`. Сопоставление «статус →
+  тема и класс» сейчас скопировано в `TimeEntryListView` и `MyTimeEntries`.
+  Выношу его в один класс `TimeEntryStatusBadge` (пакет
+  `view.timeentry`), им пользуются оба грида и форма.
+
+== Светлая и тёмная схема
+
+* `TimesheetsApplication`: `@JsModule("./src/theme/
+  color-scheme-switching-support.js")`.
+* `main-view.xml`: раскомментировать `themeSwitchItem` с
+  `userMenu_themeSwitch` в `userMenu`.
+* Закомментированный `//@ColorScheme(ColorScheme.Value.DARK)` не трогаю.
+* Свои стили проекта в тёмной схеме:
+** `--aura-accent-color-light` и `-dark` в `timesheets.css` уже заданы
+   парой — работает;
+** `status-approved`, `status-rejected`, `rejected-count`,
+   `project-status-*` берут константы `--aura-green` и `--aura-red`:
+   заливка бейджа одинакова в обеих схемах, контраст текста Aura считает
+   сама (`--aura-accent-contrast-color`);
+** `open-project` и `closed-project` в гриде проектов используют `-text`
+   токены, которые сами подстраиваются под схему;
+** градиент кнопок в `timesheets.css` построен на `color-mix` с `white` и
+   `black` — это правила автора, не трогаю. В тёмной схеме проверить
+   глазами (Gate 3).
+
+== Файлы
+
+* Новые: `ProjectCardsView.java`, `project-cards-view.xml`,
+  `TimeEntryStatusBadge.java`, `themes/timesheets-aura/view/project-cards.css`,
+  `themes/timesheets-aura/view/time-entry-status.css`. Оба CSS
+  подключаются `@import` в `styles.css`.
+* Меняются: `TimeEntryListView`, `MyTimeEntries`, `MyWeekView` (генератор
+  частей строк, общий бейдж), `TimeEntryDetailView` и
+  `time-entry-detail-view.xml` (бейдж), `TimesheetsApplication`
+  (`@JsModule`), `main-view.xml`, `menu.xml`, `messages_en.properties`.
+* `timesheets.css` автора не меняется.
+
+== Сообщения
+
+Пакет `com.company.timesheets.view.projectcards`: `projectCardsView.title`
+(«Project cards», он же пункт меню), `monthHours` («Hours this month: %s»),
+`participants` («Participants: %s»). Название статуса — из enum
+`ProjectStatus` (`metadataTools.format`).
+
+== Тесты
+
+Новой бизнес-логики нет: цифры карточки считает
+`HoursReportService.loadProjectSummaries()`, его покрывает
+`HoursReportServiceTest`. Оформление проверяется только в браузере, новых
+автотестов нет (решение 4).
+
+== Кто что делает
+
+* Studio (по желанию): заготовка `ProjectCardsView`.
+* Я: всё остальное из «Файлов».
+* Ничего не коммичу.
+
+== Решения по ревью
+
+. Часы за месяц — как в отчёте: только `APPROVED` и `CLOSED`.
+. Строка `REJECTED` — заливка через `--ts-rejected-row-background`. Слой
+  `background-image`, а не `background-color`: фон выделения и наведения
+  строки остаётся под ним.
+. Бейдж в форме — первой строкой под заголовком.
+. UI-теста на экран карточек нет.
+
+== Критерии приёмки
+
+. В меню «Projects» есть «Project cards». На каждый проект одна карточка:
+  имя, клиент, бейдж статуса, часы за текущий месяц (`ч:мм`), число
+  участников.
+. «Open» и «Closed» на бейдже разного цвета, текст читается в светлой и
+  тёмной схеме.
+. Сетка подстраивается под ширину, на узком экране (≤ 400 px) одна
+  колонка, без горизонтальной прокрутки.
+. Клик по карточке и Enter на карточке в фокусе открывают форму проекта.
+  «Закрыть» возвращает к карточкам.
+. В «Time entries», «My time entries» и «My week» строки `REJECTED` залиты
+  красным оттенком. Выбранная строка заметна.
+. В форме списания под заголовком бейдж статуса того же цвета, что в
+  гриде. Смена статуса в форме меняет бейдж.
+. В меню пользователя есть переключатель схемы (System / Light / Dark).
+  Выбор применяется сразу и сохраняется после F5.
+. В новых CSS нет жёстких цветов, отступов, радиусов и теней: только
+  `var(--aura-*)`, `var(--vaadin-*)` и своё свойство на их основе. Ни
+  одного `--lumo-*`.
+. В тёмной схеме экраны карточек, гриды списаний и форма списания
+  читаются: нет белого текста на белом и тёмного на тёмном.
+. `gradle clean test` зелёный.

@@ -17,7 +17,7 @@
     <facets>
         <dataLoadCoordinator auto="true"/>
         <urlQueryParameters>
-            <genericFilter component="genericFilter"/>
+            <propertyFilter component="nameFilter"/>
             <pagination component="pagination"/>
         </urlQueryParameters>
     </facets>
@@ -26,38 +26,28 @@
         <action id="discardAction" type="lookup_discard"/>
     </actions>
     <layout>
-        <genericFilter id="genericFilter"
-                       dataLoader="clientsDl">
-            <properties include=".*"/>
-        </genericFilter>
+        <propertyFilter id="nameFilter"
+                        property="name"
+                        operation="CONTAINS"
+                        dataLoader="clientsDl"
+                        labelVisible="false">
+            <textField id="nameFilterField" placeholder="msg://nameFilterField.placeholder">
+                <prefix>
+                    <icon icon="SEARCH"/>
+                </prefix>
+            </textField>
+
+        </propertyFilter>
+
         <hbox id="buttonsPanel" wrap="true" width="100%">
             <startSlot>
-                <button id="createButton" action="clientsDataGrid.createAction"/>
-                <button id="editButton" action="clientsDataGrid.editAction"/>
-                <button id="removeButton" action="clientsDataGrid.removeAction"/>
+                <button id="createButton" text="msg:///actions.Create" icon="PLUS" themeNames="primary"/>
             </startSlot>
             <endSlot>
                 <simplePagination id="pagination" dataLoader="clientsDl"/>
             </endSlot>
         </hbox>
-        <dataGrid id="clientsDataGrid"
-                  width="100%"
-                  minHeight="20em"
-                  dataContainer="clientsDc"
-                  columnReorderingAllowed="true">
-            <actions>
-                <action id="createAction" type="list_create"/>
-                <action id="editAction" type="list_edit"/>
-                <action id="removeAction" type="list_remove"/>
-            </actions>
-            <columns resizable="true">
-                <column property="name"/>
-                <column property="contactInformation.email"/>
-                <column property="contactInformation.phone"/>
-                <column property="contactInformation.address"/>
-                <column property="contactInformation.url"/>
-            </columns>
-        </dataGrid>
+        <virtualList id="clientsList" itemsContainer="clientsDc"/>
         <hbox id="lookupActions" visible="false">
             <button id="selectButton" action="selectAction"/>
             <button id="discardButton" action="discardAction"/>

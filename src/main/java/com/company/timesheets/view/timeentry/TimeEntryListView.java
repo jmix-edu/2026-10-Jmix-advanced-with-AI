@@ -1,7 +1,6 @@
 package com.company.timesheets.view.timeentry;
 
 import com.company.timesheets.entity.TimeEntry;
-import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.view.main.MainView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Span;
@@ -28,16 +27,13 @@ public class TimeEntryListView extends StandardListView<TimeEntry> {
     @Supply(to = "timeEntriesDataGrid.status", subject = "renderer")
     private Renderer<TimeEntry> timeEntriesDataGridStatusRenderer() {
         return new ComponentRenderer<>(Span::new, (span, timeEntry) -> {
-            // у бейджа Джеймикс под Aura нет success/error: цвет задают классы status-* (timesheets.css)
-            span.getElement().setAttribute("theme", timeEntry.getStatus() == TimeEntryStatus.CLOSED
-                    ? "badge contrast" : "badge");
-            span.setClassName(switch (timeEntry.getStatus()) {
-                case NEW, CLOSED -> "";
-                case APPROVED -> "status-approved";
-                case REJECTED -> "status-rejected";
-            });
-            span.setText(metadataTools.format(timeEntry.getStatus()));
+            TimeEntryStatusBadge.apply(span, timeEntry.getStatus(), metadataTools);
         });
+    }
+
+    @Install(to = "timeEntriesDataGrid", subject = "partNameGenerator")
+    private String timeEntriesDataGridPartNameGenerator(final TimeEntry timeEntry) {
+        return TimeEntryStatusBadge.rowPartName(timeEntry);
     }
 
 }

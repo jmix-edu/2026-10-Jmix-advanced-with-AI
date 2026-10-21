@@ -1,6 +1,7 @@
 package com.company.timesheets;
 
 import com.google.common.base.Strings;
+import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.ColorScheme;
@@ -26,6 +27,8 @@ import javax.sql.DataSource;
 @StyleSheet(Aura.STYLESHEET)
 @StyleSheet(JmixAura.STYLESHEET)
 @StyleSheet("themes/timesheets-aura/styles.css")
+// Light/dark switch in the user menu (userMenu_themeSwitch): the script sets the color-scheme Aura relies on.
+@JsModule("./src/theme/color-scheme-switching-support.js")
 //@ColorScheme(ColorScheme.Value.DARK)
 @PWA(name = "Timesheets", shortName = "Timesheets", offline = false)
 @SpringBootApplication

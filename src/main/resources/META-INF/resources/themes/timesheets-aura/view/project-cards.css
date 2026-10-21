@@ -1,0 +1,37 @@
+/* «Project cards»: an adaptive grid of cards, one column on a narrow screen.
+   18rem is the column width (layout); colors, spacing, radii and shadows come from theme tokens. */
+.project-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: var(--vaadin-gap-m);
+}
+
+.project-card {
+    cursor: pointer;
+}
+
+.project-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vaadin-gap-xs);
+}
+
+.project-card:hover {
+    --vaadin-card-border-color: var(--aura-accent-border-color);
+}
+
+.project-card:focus-visible {
+    --vaadin-card-border-color: var(--aura-accent-border-color);
+    outline: var(--vaadin-focus-ring-width) solid var(--vaadin-focus-ring-color);
+}
+
+/* Project status badge: the Jmix badge is filled with the accent color, the text contrast is computed by Aura. */
+.project-status-open {
+    --aura-accent-color-light: var(--aura-green);
+    --aura-accent-color-dark: var(--aura-green);
+}
+
+.project-status-closed {
+    --aura-accent-color-light: var(--aura-neutral);
+    --aura-accent-color-dark: var(--aura-neutral);
+}

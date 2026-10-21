@@ -73,3 +73,9 @@ vaadin-grid::part(closed-project) {
     --aura-accent-color-light: var(--aura-red);
     --aura-accent-color-dark: var(--aura-red);
 }
+
+.client-card {
+    border-radius: var(--vaadin-radius-m);
+    margin: var(--vaadin-padding-s);
+    box-shadow: var(--aura-shadow-s);
+}

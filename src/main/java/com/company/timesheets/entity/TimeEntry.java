@@ -1,5 +1,6 @@
 package com.company.timesheets.entity;
 
+import com.company.timesheets.datatype.PositiveSpentTime;
 import com.company.timesheets.datatype.SpentTime;
 import io.jmix.core.DeletePolicy;
 import io.jmix.core.annotation.DeletedBy;
@@ -10,6 +11,7 @@ import io.jmix.core.metamodel.annotation.DependsOnProperties;
 import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
 import io.jmix.core.metamodel.datatype.DatatypeFormatter;
+import io.jmix.core.validation.group.UiComponentChecks;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -43,6 +45,7 @@ public class TimeEntry {
     private LocalDate date;
 
     @NotNull
+    @PositiveSpentTime(groups = UiComponentChecks.class)
     @Column(name = "SPENT_TIME", nullable = false)
     private SpentTime spentTime;
 

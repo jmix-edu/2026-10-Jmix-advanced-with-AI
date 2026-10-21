@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Own UI components of the application, used in view descriptors as
+     xmlns:ts="http://company.com/timesheets/schema/components". -->
+<xs:schema targetNamespace="http://company.com/timesheets/schema/components"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://company.com/timesheets/schema/components"
+           xmlns:layout="http://jmix.io/schema/flowui/layout"
+           elementFormDefault="qualified">
+
+    <xs:import namespace="http://jmix.io/schema/flowui/layout"
+               schemaLocation="http://jmix.io/schema/flowui/layout"/>
+
+    <xs:element name="spentTimeField">
+        <xs:annotation>
+            <xs:documentation>
+                Field for a SpentTime attribute: hours, minutes and quick +0:15, +1:00 buttons.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:complexContent>
+                <xs:extension base="layout:baseFieldComponent">
+                    <xs:attributeGroup ref="layout:hasRequired"/>
+                    <xs:attributeGroup ref="layout:hasValidation"/>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

@@ -7,6 +7,7 @@ import com.company.timesheets.entity.TimeEntry;
 import com.company.timesheets.entity.User;
 import com.company.timesheets.view.main.MainView;
 import com.company.timesheets.view.timeentry.TimeEntryDetailView;
+import com.company.timesheets.view.timeentry.TimeEntryStatusBadge;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Span;
@@ -124,6 +125,11 @@ public class MyWeekView extends StandardView {
     @Install(to = "timeEntriesDataGrid.edit", subject = "afterSaveHandler")
     private void timeEntriesDataGridEditAfterSaveHandler(final TimeEntry entry) {
         timeEntriesDl.load();
+    }
+
+    @Install(to = "timeEntriesDataGrid", subject = "partNameGenerator")
+    private String timeEntriesDataGridPartNameGenerator(final TimeEntry timeEntry) {
+        return TimeEntryStatusBadge.rowPartName(timeEntry);
     }
 
     @Supply(to = "timeEntriesDataGrid.project", subject = "renderer")

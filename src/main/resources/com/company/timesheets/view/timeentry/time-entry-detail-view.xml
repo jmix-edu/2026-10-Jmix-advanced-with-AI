@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <view xmlns="http://jmix.io/schema/flowui/view"
+      xmlns:ts="http://company.com/timesheets/schema/components"
       title="msg://timeEntryDetailView.title"
       focusComponent="form">
     <data>
@@ -20,6 +21,8 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
+        <!-- Status badge right under the title: the title itself belongs to the dialog or the main view. -->
+        <span id="statusBadge"/>
         <formLayout id="form" dataContainer="timeEntryDc">
             <responsiveSteps>
                 <responsiveStep minWidth="0" columns="1"/>
@@ -61,11 +64,7 @@
                     <action id="entityClearAction" type="entity_clear"/>
                 </actions>
             </entityComboBox>
-            <textField id="spentTimeField" property="spentTime" placeholder="msg://spentTimeField.placeholder">
-                <prefix>
-                    <icon icon="CLOCK"/>
-                </prefix>
-            </textField>
+            <ts:spentTimeField id="spentTimeField" property="spentTime"/>
             <select id="statusField" property="status"/>
             <textArea id="descriptionField" height="9.5em" property="description" colspan="2">
                 <prefix>

@@ -20,9 +20,9 @@
                                     themeNames="non-checkable">
                             <action id="substituteUserAction" type="sec_userMenuSubstituteUser"/>
                         </actionItem>
-<!--                        <actionItem id="themeSwitchItem">-->
-<!--                            <action id="themeSwitch" type="userMenu_themeSwitch"/>-->
-<!--                        </actionItem>-->
+                        <actionItem id="themeSwitchItem">
+                            <action id="themeSwitch" type="userMenu_themeSwitch"/>
+                        </actionItem>
                         <separator/>
                         <actionItem id="logoutMenuItem" ref="logoutAction"
                                     themeNames="non-checkable"/>

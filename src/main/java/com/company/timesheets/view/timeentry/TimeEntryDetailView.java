@@ -7,8 +7,10 @@ import com.company.timesheets.entity.TimeEntryStatus;
 import com.company.timesheets.entity.User;
 import com.company.timesheets.view.main.MainView;
 import com.company.timesheets.view.task.TaskLookupView;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.router.Route;
+import io.jmix.core.MetadataTools;
 import io.jmix.core.usersubstitution.CurrentUserSubstitution;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.component.combobox.EntityComboBox;
@@ -37,6 +39,10 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     private EntityComboBox<Task> taskField;
     @ViewComponent
     private JmixTextArea rejectionReasonField;
+    @ViewComponent
+    private Span statusBadge;
+    @Autowired
+    private MetadataTools metadataTools;
     @Autowired
     private CurrentUserSubstitution currentUserSubstitution;
     @Autowired
@@ -99,12 +105,14 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     @Subscribe(id = "timeEntryDc", target = Target.DATA_CONTAINER)
     public void onTimeEntryDcItemChange(final InstanceContainer.ItemChangeEvent<TimeEntry> event) {
         updateRejectionReasonField();
+        updateStatusBadge();
     }
 
     @Subscribe(id = "timeEntryDc", target = Target.DATA_CONTAINER)
     public void onTimeEntryDcItemPropertyChange(final InstanceContainer.ItemPropertyChangeEvent<TimeEntry> event) {
         if ("status".equals(event.getProperty())) {
             updateRejectionReasonField();
+            updateStatusBadge();
         }
         // Пользователь выбран: задачу можно выбирать, список задач перечитываем под него.
         // Задача выбрана в общем списке: пользователя больше не меняем.
@@ -119,6 +127,11 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
 
     private void updateRejectionReasonField() {
         rejectionReasonField.setVisible(TimeEntryStatus.REJECTED == getEditedEntity().getStatus());
+    }
+
+    // Бейдж статуса того же вида, что в гридах списаний.
+    private void updateStatusBadge() {
+        TimeEntryStatusBadge.apply(statusBadge, getEditedEntity().getStatus(), metadataTools);
     }
 
     // Задачи в выпадающем списке грузятся порциями с фильтром по вводу:

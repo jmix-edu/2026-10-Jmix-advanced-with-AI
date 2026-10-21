@@ -1,12 +1,25 @@
 package com.company.timesheets.view.project;
 
+import com.company.timesheets.entity.Client;
 import com.company.timesheets.entity.Project;
 import com.company.timesheets.entity.ProjectParticipant;
 import com.company.timesheets.entity.Task;
 import com.company.timesheets.view.main.MainView;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.avatar.Avatar;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.FlexLayout;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.data.renderer.Renderer;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.jmix.core.DataManager;
 import io.jmix.flowui.DialogWindows;
+import io.jmix.flowui.UiComponents;
 import io.jmix.flowui.component.grid.DataGrid;
 import io.jmix.flowui.component.tabsheet.JmixTabSheet;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
@@ -14,6 +27,9 @@ import io.jmix.flowui.kit.action.BaseAction;
 import io.jmix.flowui.model.CollectionLoader;
 import io.jmix.flowui.view.*;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 
 
 @Route(value = "projects/:id", layout = MainView.class)
@@ -33,6 +49,8 @@ public class ProjectDetailView extends StandardDetailView<Project> {
     private CollectionLoader<ProjectParticipant> participantsDl;
     @ViewComponent
     private CollectionLoader<Task> tasksDl;
+    @Autowired
+    private UiComponents uiComponents;
 
     // Содержимое вкладок формы загружается, только когда вкладку открывают.
     @Subscribe("tabSheet")
@@ -122,5 +140,48 @@ public class ProjectDetailView extends StandardDetailView<Project> {
                 .editEntity(taskToEdit)
                 .withParentDataContext(getViewData().getDataContext())
                 .open();
+    }
+
+
+    //todo check how to hide empty space at the position 0
+    @Supply(to = "clientsComboBox", subject = "renderer")
+    private Renderer<Client> clientsComboBoxRenderer() {
+        return new ComponentRenderer<>(client -> {
+            FlexLayout wrapper = uiComponents.create(FlexLayout.class);
+            wrapper.setAlignItems(FlexComponent.Alignment.CENTER);
+            wrapper.getStyle().set("gap", "var(--vaadin-gap-xl)");
+
+            String clientName = client.getName();
+
+            wrapper.add(
+                    createAvatar(clientName, client.getImage(), "1em"),
+                    new Text(clientName)
+            );
+
+            return wrapper;
+        }); 
+    }
+
+    private Avatar createAvatar(String name, @Nullable byte[] data, String size) {
+
+        Avatar avatar = uiComponents.create(Avatar.class);
+        avatar.setName(name);
+
+        if (data != null) {
+            DownloadHandler handler = DownloadHandler.fromInputStream(downloadEvent ->
+                    new DownloadResponse(
+                            new ByteArrayInputStream(data),
+                            "avatar.img",
+                            "application/octet-stream",
+                            data.length
+                    ));
+            avatar.setImageHandler(handler);
+        }
+
+        avatar.setWidth(size);
+        avatar.setHeight(size);
+
+        return avatar;
+
     }
 }

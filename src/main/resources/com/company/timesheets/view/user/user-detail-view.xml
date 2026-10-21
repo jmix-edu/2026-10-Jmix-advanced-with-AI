@@ -16,24 +16,26 @@
     <facets>
         <dataLoadCoordinator auto="true"/>
     </facets>
-    <layout>
-        <formLayout id="form" dataContainer="userDc">
-            <textField id="usernameField" property="username" readOnly="true"/>
-            <passwordField id="passwordField"
-                           label="msg://com.company.timesheets.entity/User.password"
-                           required="true"
-                           visible="false"/>
-            <passwordField id="confirmPasswordField"
-                           label="msg://confirmPassword"
-                           required="true"
-                           visible="false"/>
-            <textField id="firstNameField" property="firstName"/>
-            <textField id="lastNameField" property="lastName"/>
-            <textField id="emailField" property="email"/>
-            <comboBox id="timeZoneField" property="timeZoneId" clearButtonVisible="true"/>
-            <checkbox id="activeField" property="active"/>
-        </formLayout>
-        <hbox id="detailActions">
+    <layout padding="false" spacing="false" expand="contentBox">
+        <vbox id="contentBox" css="overflow: auto">
+            <formLayout id="form" dataContainer="userDc">
+                <textField id="usernameField" property="username" readOnly="true"/>
+                <passwordField id="passwordField"
+                               label="msg://com.company.timesheets.entity/User.password"
+                               required="true"
+                               visible="false"/>
+                <passwordField id="confirmPasswordField"
+                               label="msg://confirmPassword"
+                               required="true"
+                               visible="false"/>
+                <textField id="firstNameField" property="firstName"/>
+                <textField id="lastNameField" property="lastName"/>
+                <textField id="emailField" property="email"/>
+                <comboBox id="timeZoneField" property="timeZoneId" clearButtonVisible="true"/>
+                <checkbox id="activeField" property="active"/>
+            </formLayout>
+        </vbox>
+        <hbox id="detailActions" padding="true" width="50%" justifyContent="END">
             <button id="saveAndCloseButton" action="saveCloseAction"/>
             <button id="closeButton" action="closeAction"/>
         </hbox>

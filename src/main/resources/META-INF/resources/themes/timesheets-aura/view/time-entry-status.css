@@ -1,0 +1,10 @@
+/* Rejected time entries in grids (partNameGenerator returns rejected-row).
+   Aura has no light red fill token, so the tint is defined once from --aura-red.
+   It is a background-image layer: the row's selection and hover background stays visible under it. */
+html {
+    --ts-rejected-row-background: color-mix(in srgb, var(--aura-red) 12%, transparent);
+}
+
+vaadin-grid::part(rejected-row) {
+    background-image: linear-gradient(var(--ts-rejected-row-background), var(--ts-rejected-row-background));
+}

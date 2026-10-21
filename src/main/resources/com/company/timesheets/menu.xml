@@ -11,6 +11,7 @@
     <menu id="projects" description="msg://com.company.timesheets/menu_config.projects.description"
           title="msg://com.company.timesheets/menu_config.projects.title" opened="true">
         <item view="ts_Project.list" title="msg://com.company.timesheets.view.project/projectListView.title"/>
+        <item view="Projects.cards" title="msg://com.company.timesheets.view.projectcards/projectCardsView.title"/>
         <item view="ts_Client.list" title="msg://com.company.timesheets.view.client/clientListView.title"/>
         <item view="ts_Task.list" title="msg://com.company.timesheets.view.task/taskListView.title"/>
         <item view="ts_TimeEntry.list" title="msg://com.company.timesheets.view.timeentry/timeEntryListView.title"/>

@@ -1,0 +1,12 @@
+/* SpentTimeField: only the layout of its parts. Colors, borders, focus and error come from the standard
+   integer fields, buttons and vaadin-custom-field, so both color schemes look like the other fields. */
+.spent-time-field-parts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--vaadin-gap-s);
+}
+
+.spent-time-field-parts vaadin-integer-field {
+    width: 7em;
+}

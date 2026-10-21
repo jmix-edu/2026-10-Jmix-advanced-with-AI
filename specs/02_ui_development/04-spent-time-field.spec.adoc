@@ -1,0 +1,262 @@
+= 02_ui_development / 04 — Свой компонент SpentTimeField
+:toc:
+:status: реализована, ждёт Gate 3
+
+== Цель
+
+Время списания вводится не текстом `ч:мм`, а двумя числами: часы и минуты,
+со стрелками и быстрыми кнопками. Поле ведёт себя как стандартное поле Jmix:
+привязка к контейнеру, обязательность, только чтение, ошибки валидации,
+подсказки Studio, обе цветовые схемы Aura.
+
+== В области
+
+* Компонент `SpentTimeField` для атрибута типа `SpentTime`.
+* XML-элемент `spentTimeField` со своей XSD, загрузчик, регистрация в
+  Jmix, описание для Studio.
+* Замена `textField id="spentTimeField"` в `time-entry-detail-view.xml`.
+* Проверка `0:00` как ошибка поля (вопрос 1).
+* Unit-тест на преобразование значения.
+
+== Вне области
+
+* Свой web component и JS-библиотеки: компонент собирается из стандартных
+  Vaadin-компонентов на сервере.
+* Права (M3).
+* `SpentTime` в гридах, фильтрах и отчётах: там по-прежнему datatype и
+  текст `ч:мм`.
+* `ColorPicker` и `ColorComponent` в пакете `component`: это демо автора,
+  не трогаю.
+
+== Что уже есть
+
+Проверено по исходникам `jmix-flowui-3.0.2` и `jmix-flowui-kit-3.0.2`:
+
+* Форма списания и диалог «Моей недели» — один экран
+  (`TimeEntryDetailView`): «Моя неделя» открывает его диалогом. Значит,
+  поле заменяется в одном дескрипторе и работает в обоих местах.
+* `SpentTime` — `record SpentTime(long minutes)`, отрицательные значения
+  запрещены конструктором. В сущности `@NotNull spentTime`. Правило «не
+  `0:00`» живёт в `TimeEntryRulesListener` (спека 01/05) и срабатывает
+  только при сохранении: пользователь видит уведомление, а не ошибку у
+  поля.
+* Так устроены стандартные поля Jmix (например, `TypedTimePicker`):
+** Vaadin-поле (`AbstractField`) плюс интерфейсы Jmix:
+   `SupportsValueSource`, `SupportsValidation`, `HasRequired`,
+   `SupportsStatusChangeHandler`;
+** всю работу с данными делает прототип-бин `FieldDelegate`
+   (`applicationContext.getBean(FieldDelegate.class, this)`): привязка к
+   контейнеру, валидаторы, обязательность из метаданных, сообщение об
+   ошибке, bean validation атрибута сущности
+   (`AbstractFieldDelegate`, ветка `EntityValueSource`);
+** компонент создаётся через `UiComponents`, поэтому Spring вызывает у
+   него `setApplicationContext` и `afterPropertiesSet`.
+* Загрузчик: наследник `AbstractComponentLoader`.
+  `getDataLoaderSupport().loadData(component, element)` берёт `property` и
+  `dataContainer` с элемента или, если его нет, с родителя (`formLayout`).
+  `componentLoader().loadLabel`, `loadRequired`, `loadEnabled`,
+  `loadValidationAttributes`, `loadHelperText` и другие загружают общие
+  атрибуты.
+* Регистрация: бин `ComponentRegistration`, собранный
+  `ComponentRegistrationBuilder.create(SpentTimeField.class)
+  .withComponentLoader("spentTimeField", SpentTimeFieldLoader.class)`.
+  Загрузчик ищется по локальному имени элемента
+  (`LayoutLoaderConfig`, `element.getName()`), пространство имён для
+  загрузки не важно. Оно нужно XSD и Studio.
+* Studio: аннотации `io.jmix.flowui.kit.meta` — интерфейс с
+  `@StudioUiKit`, метод с `@StudioComponent(xmlElement, xmlns, xmlnsAlias,
+  properties = @StudioProperty(...))`. Типы свойств:
+  `DATA_CONTAINER_REF`, `PROPERTY_REF`, `LOCALIZED_STRING`, `BOOLEAN`,
+  `SIZE` и т. д.
+* Vaadin `CustomField<T>`: стандартный `vaadin-custom-field`, тот же, что
+  рисует подпись, звёздочку обязательности, текст ошибки и подсказку у
+  других полей Aura. Свой web component не нужен.
+
+== Компонент
+
+`com.company.timesheets.component.SpentTimeField extends
+CustomField<SpentTime>` и реализует `SupportsValueSource<SpentTime>`,
+`SupportsValidation<SpentTime>`, `HasRequired`,
+`SupportsStatusChangeHandler<SpentTimeField>`, `ApplicationContextAware`,
+`InitializingBean`. Методы этих интерфейсов передаются в
+`FieldDelegate<SpentTimeField, SpentTime, SpentTime>`, как у
+`TypedTimePicker`.
+
+Внутри, в одну строку:
+
+* `IntegerField` «часы»: `min=0`, `max=24`, стрелки (`stepButtonsVisible`),
+  шаг 1;
+* `IntegerField` «минуты»: `min=0`, `max=59`, стрелки, шаг 15. С клавиатуры
+  можно ввести любое число от 0 до 59;
+* кнопки «+0:15» и «+1:00» (`tertiary`): прибавляют к текущему значению,
+  пустое считается `0:00`. Минуты переносятся в часы: `0:45` + «+0:15» =
+  `1:00`.
+
+Значение:
+
+* Числовые поля работают с `setManualValidation(true)`: их собственная
+  проверка пометила бы минуты не кратные 15 как ошибку. Диапазон
+  проверяет сам `SpentTimeField`: при неверной части модель сохраняет
+  последнее верное значение, а внутренний валидатор поля
+  (`spentTimeField.invalidParts`) показывает ошибку под полем и не даёт
+  сохранить форму, как любая ошибка стандартного поля.
+
+* `generateModelValue()`: оба поля пустые — `null`. Одно пустое — считается
+  нулём. Число вне диапазона или не число — конверсия неуспешна: поле
+  помечается ошибкой, в модель ничего не пишется.
+* `setPresentationValue(SpentTime)`: `null` очищает оба поля; иначе часы =
+  `minutes / 60`, минуты = `minutes % 60`.
+* Преобразование — два статических метода `toSpentTime(Integer hours,
+  Integer minutes)` и `toParts(SpentTime)` в самом классе. Их проверяет
+  тест.
+* `24:00` и больше полем не запрещается сверх `max=24`, суточный лимит
+  остаётся за `TimeEntryRulesListener`.
+
+Состояния:
+
+* *Обязательность*: `@NotNull` атрибута даёт звёздочку через
+  `FieldDelegate`, как у стандартных полей. Пустое поле при сохранении —
+  стандартное «Required».
+* *Только чтение*: `setReadOnly` переопределён и передаётся обоим числовым
+  полям; быстрые кнопки скрываются. Срабатывает и от атрибута
+  `readOnly="true"`, и от режима только для чтения всей формы
+  (`StandardDetailView`, параметр `?mode=readonly`). По статусу списания
+  форма поля сейчас не блокирует, это не меняю.
+* *Ошибка*: `setInvalid` и `setErrorMessage` от `CustomField`, текст под
+  полем, как у остальных полей формы.
+* Подпись (`label`), подсказка (`helperText`), `width` — стандартные
+  атрибуты `CustomField`.
+
+Префикс с иконкой часов, который сейчас стоит у `textField`, в компоненте
+не повторяю: у `CustomField` нет `prefix`.
+
+== Проверка `0:00` как ошибки поля
+
+Сейчас `0:00` отклоняется только при сохранении, уведомлением. Чтобы
+ошибка была у поля, как у стандартных проверок:
+
+* аннотация `@PositiveSpentTime` и её валидатор
+  (`ConstraintValidator<PositiveSpentTime, SpentTime>`) в
+  `com.company.timesheets.datatype`. `null` она пропускает: за него отвечает
+  `@NotNull`. Сообщение — ключ `{msg://com.company.timesheets.datatype/
+  PositiveSpentTime.message}` («Spent time must be more than 0:00»);
+* `TimeEntry.spentTime` получает `@PositiveSpentTime(groups =
+  UiComponentChecks.class)`. Группа обязательна: Jmix включает в EclipseLink
+  `jakarta.persistence.validation.mode=AUTO`, и аннотация в группе по
+  умолчанию отклоняла бы `0:00` уже при `persist`, раньше слушателя и
+  другим исключением (`TimeEntryRulesTest.zeroSpentTimeIsRejected` упал
+  бы). Поля Jmix проверяют группы `Default` и `UiComponentChecks`
+  (`AbstractBeanValidator`), JPA — только `Default`;
+* `FieldDelegate` сам добавляет bean validation атрибута к полю: ошибка
+  появляется под полем при вводе `0:00` и при попытке сохранить;
+* проверка в `TimeEntryRulesListener` остаётся: она защищает сохранения не
+  из UI (сервисы, REST, тесты).
+
+Changelog не нужен: аннотация на базу не влияет.
+
+== XML и Studio
+
+* XSD `com/company/timesheets/component/timesheets-components.xsd`,
+  пространство имён `http://company.com/timesheets/schema/components`.
+  Элемент `spentTimeField` расширяет базовые типы поля из
+  `http://jmix.io/schema/flowui/layout` (атрибуты `id`, `property`,
+  `dataContainer`, `label`, `required`, `requiredMessage`, `readOnly`,
+  `enabled`, `visible`, `width`, `helperText`, `classNames`, `colspan`).
+* В дескрипторе:
++
+[source,xml]
+----
+<view xmlns="http://jmix.io/schema/flowui/view"
+      xmlns:ts="http://company.com/timesheets/schema/components" ...>
+    ...
+    <ts:spentTimeField id="spentTimeField" property="spentTime"/>
+----
+* `SpentTimeFieldLoader extends AbstractComponentLoader<SpentTimeField>`:
+  `loadData`, `loadLabel`, `loadRequired`, `loadEnabled`, `loadReadOnly`,
+  `loadHelperText`, `loadSizeAttributes`, `loadClassNames`,
+  `loadValidationAttributes`.
+* Регистрация: `@Configuration TimesheetsComponentsConfiguration` в пакете
+  `component` с бином `ComponentRegistration`.
+* Studio: интерфейс `TimesheetsStudioComponents` с `@StudioUiKit` и методом,
+  по образцу `StudioComponents` из `jmix-flowui-kit`. Свойства заданы
+  группами `StudioPropertyGroups.ValidatableBaseFieldComponent`, `Property`,
+  `RequiredAttributes` и связкой `dataContainer` → `property`. Исходный план:
+  `@StudioComponent(name = "SpentTimeField", classFqn = ...,
+  category = "Components", xmlElement = "spentTimeField", xmlns = ...,
+  xmlnsAlias = "ts", properties = {...})`. Свойства: `id`, `dataContainer`
+  (`DATA_CONTAINER_REF`), `property` (`PROPERTY_REF`), `label`,
+  `helperText`, `requiredMessage` (`LOCALIZED_STRING`), `required`,
+  `readOnly`, `enabled`, `visible` (`BOOLEAN`), `width` (`SIZE`),
+  `classNames`, `colspan`. Компонент появляется в палитре Studio и в
+  инспекторе свойств.
++
+Studio подхватывает такие интерфейсы при индексации проекта. Если она
+этого не делает, в Gate 3 проверим и, если нужно, попрошу образец.
+
+== Оформление
+
+* Своё правило только для раскладки частей:
+  `themes/timesheets-aura/view/spent-time-field.css`,
+  `.spent-time-field-parts { display: flex; gap: var(--vaadin-gap-s);
+  align-items: baseline; }`, ширина числовых полей — `width` в
+  `em`, без цветов. Подключение — `@import` в `styles.css`.
+* Цвета, рамки, ошибка и фокус — от стандартных `vaadin-integer-field`,
+  `vaadin-button` и `vaadin-custom-field`. Поэтому светлая и тёмная схемы
+  работают так же, как у соседних полей формы.
+
+== Сообщения
+
+Пакет `com.company.timesheets.component`: `spentTimeField.hours`
+(«h», подпись или `aria-label` поля часов), `spentTimeField.minutes`
+(«min»), `spentTimeField.add15.ariaLabel`, `spentTimeField.add60.ariaLabel`.
+Тексты кнопок «+0:15» и «+1:00» — не переводимые литералы.
+Плюс ключ сообщения `@PositiveSpentTime`.
+
+== Тесты
+
+`SpentTimeFieldTest` (обычный unit-тест, без Spring):
+
+* `toSpentTime`: `(1, 30)` → 90 минут; `(null, 45)` → 45; `(2, null)` → 120;
+  `(null, null)` → `null`; `(0, 60)`, `(-1, 0)`, `(25, 0)` — неуспех;
+* `toParts`: 90 → `(1, 30)`, 0 → `(0, 0)`, `null` → оба пустые;
+* быстрые кнопки как функция «значение + шаг»: `null` + 15 → `0:15`,
+  `0:45` + 15 → `1:00`, `1:30` + 60 → `2:30`.
+
+`PositiveSpentTime` — случай в существующем `TimeEntryRulesTest` или
+отдельный тест валидатора: `0:00` нарушает, `0:01` и `null` — нет.
+
+Отображение, только чтение и ошибка у поля — Gate 3.
+
+== Кто что делает
+
+* Я: всё из «Компонента», «XML и Studio», «Проверки 0:00», CSS,
+  сообщения, тесты, замена в `time-entry-detail-view.xml`.
+* Studio: ничего не генерирует. Проверка палитры и инспектора — в Gate 3.
+* Ничего не коммичу.
+
+== Решения по ревью
+
+. `0:00` — `@PositiveSpentTime` на атрибуте (в группе `UiComponentChecks`),
+  проверка в слушателе остаётся.
+. Часы ограничены 24.
+. Быстрые кнопки только «+0:15» и «+1:00».
+
+== Критерии приёмки
+
+. В `time-entry-detail-view.xml` вместо `textField` стоит
+  `<ts:spentTimeField property="spentTime"/>`. Форма списания и диалог
+  «Моей недели» показывают часы, минуты и кнопки «+0:15», «+1:00».
+. Стрелки минут шагают по 15, ввод с клавиатуры принимает 0–59. Кнопки
+  прибавляют время с переносом минут в часы.
+. Сохранённое значение равно введённому: `1` ч `30` мин → `1:30` в гриде.
+  Открытое существующее списание показывает свои часы и минуты.
+. У поля звёздочка обязательности. Пустое поле при сохранении даёт
+  стандартную ошибку под полем.
+. `0:00` показывает ошибку под полем ещё до сохранения, текст из
+  `@PositiveSpentTime`.
+. Форма списания в режиме только для чтения (`/time-entries/<id>?mode=readonly`)
+  показывает поле недоступным, кнопок нет.
+. В светлой и тёмной схеме поле выглядит как соседние поля формы.
+. В Studio элемент есть в палитре, у него в инспекторе есть `property` с
+  выбором атрибута и `dataContainer`.
+. `gradle clean test` зелёный, включая `SpentTimeFieldTest`.

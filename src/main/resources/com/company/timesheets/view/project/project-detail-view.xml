@@ -143,8 +143,6 @@
                 </vbox>
             </tab>
         </tabSheet>
-
-
         <hbox id="detailActions">
             <button id="saveAndCloseButton" action="saveCloseAction"/>
             <button id="saveButton" action="saveAction"/>
