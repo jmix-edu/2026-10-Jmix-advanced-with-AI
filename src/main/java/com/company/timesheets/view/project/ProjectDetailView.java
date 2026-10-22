@@ -4,6 +4,8 @@ import com.company.timesheets.entity.Client;
 import com.company.timesheets.entity.Project;
 import com.company.timesheets.entity.ProjectParticipant;
 import com.company.timesheets.entity.Task;
+import com.company.timesheets.service.ContractorInvitationService;
+import com.company.timesheets.view.invitation.InviteContractorView;
 import com.company.timesheets.view.main.MainView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Text;
@@ -18,11 +20,13 @@ import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.jmix.core.DataManager;
+import io.jmix.core.EntityStates;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.UiComponents;
 import io.jmix.flowui.component.grid.DataGrid;
 import io.jmix.flowui.component.tabsheet.JmixTabSheet;
 import io.jmix.flowui.action.AdjustWhenViewReadOnly;
+import io.jmix.flowui.kit.component.button.JmixButton;
 import io.jmix.flowui.kit.action.ActionPerformedEvent;
 import io.jmix.flowui.kit.action.BaseAction;
 import io.jmix.flowui.model.CollectionLoader;
@@ -46,6 +50,10 @@ public class ProjectDetailView extends StandardDetailView<Project> {
     private DataManager dataManager;
     @Autowired
     private DialogWindows dialogWindows;
+    @Autowired
+    private ContractorInvitationService invitationService;
+    @Autowired
+    private EntityStates entityStates;
     @ViewComponent
     private CollectionLoader<ProjectParticipant> participantsDl;
     @ViewComponent
@@ -85,6 +93,27 @@ public class ProjectDetailView extends StandardDetailView<Project> {
         ((BaseAction<?>) participantsDataGrid.getAction("editAction"))
                 .addActionPerformedListener(this::onParticipantsDataGridEditAction);
         applyReadOnlyState(participantsDataGrid);
+        initInviteContractor();
+    }
+
+    // Приглашение подрядчика (спека 03/05): только руководителю проекта и только для сохранённого проекта.
+    // Кнопка лежит на ленивой вкладке, поэтому ищем её так же, как грид.
+    private void initInviteContractor() {
+        JmixButton inviteButton = (JmixButton) getContent().findComponent("inviteContractorButton").orElseThrow();
+        Project project = getEditedEntity();
+        inviteButton.setVisible(!entityStates.isNew(project) && !isReadOnly()
+                && invitationService.canInvite(project));
+        inviteButton.addClickListener(click -> {
+            DialogWindow<InviteContractorView> dialog = dialogWindows.view(this, InviteContractorView.class)
+                    .withAfterCloseListener(close -> {
+                        if (close.closedWith(StandardOutcome.SAVE)) {
+                            participantsDl.load();
+                        }
+                    })
+                    .build();
+            dialog.getView().setProject(project);
+            dialog.open();
+        });
     }
 
     // Вкладка «Tasks» устроена так же, как «Participants».

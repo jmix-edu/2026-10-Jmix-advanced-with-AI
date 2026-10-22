@@ -96,6 +96,9 @@
                             <button action="participantsDataGrid.createAction"/>
                             <button action="participantsDataGrid.editAction"/>
                             <button action="participantsDataGrid.removeAction"/>
+                            <!-- Spec 03/05: shown to the project's manager, see ProjectDetailView.initParticipants. -->
+                            <button id="inviteContractorButton" text="msg://inviteContractor.text"
+                                    icon="ENVELOPE_O" visible="false"/>
                         </startSlot>
                         <endSlot>
                             <simplePagination id="participantsSimplePagination" dataLoader="participantsDl"/>

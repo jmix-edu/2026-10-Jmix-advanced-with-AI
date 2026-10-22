@@ -7,3 +7,10 @@
     box-shadow: var(--aura-shadow-s);
     border: 1px solid var(--vaadin-border-color);
 }
+
+/* Sign-up and activation (spec 03/03): a narrow column like the login form.
+   max-width, not width: vbox gets width 100% as an inline style, which a class rule cannot override. */
+.registration-box {
+    max-width: 22rem;
+    gap: var(--vaadin-gap-m);
+}

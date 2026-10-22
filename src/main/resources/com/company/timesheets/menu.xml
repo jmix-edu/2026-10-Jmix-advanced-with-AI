@@ -8,18 +8,19 @@
         <item view="TimeEntries.myWeek" title="msg://com.company.timesheets.view.myweek/myWeekView.title"/>
         <item view="ts_Task.list-simple" title="msg://com.company.timesheets.view.task/taskListSimpleView.title"/>
     </menu>
-    <menu id="projects" description="msg://com.company.timesheets/menu_config.projects.description"
-          title="msg://com.company.timesheets/menu_config.projects.title" opened="true">
+    <menu opened="true" id="projects" description="msg://com.company.timesheets/menu_config.projects.description"
+          title="msg://com.company.timesheets/menu_config.projects.title">
         <item view="ts_Project.list" title="msg://com.company.timesheets.view.project/projectListView.title"/>
         <item view="Projects.cards" title="msg://com.company.timesheets.view.projectcards/projectCardsView.title"/>
-        <item view="ts_PublicDashboardView" title="msg://com.company.timesheets.view.publicdashboard/publicDashboardView.menu"/>
+        <item view="ts_PublicDashboardView"
+              title="msg://com.company.timesheets.view.publicdashboard/publicDashboardView.menu"/>
         <item view="ts_Client.list" title="msg://com.company.timesheets.view.client/clientListView.title"/>
         <item view="ts_Task.list" title="msg://com.company.timesheets.view.task/taskListView.title"/>
         <item view="ts_TimeEntry.list" title="msg://com.company.timesheets.view.timeentry/timeEntryListView.title"/>
         <item view="ts_User.list" title="msg://com.company.timesheets.view.user/UserListView.title"/>
     </menu>
-    <menu id="settings" title="msg://com.company.timesheets/menu.application.title"
-          description="msg:///menu_config.settings.description">
+    <menu id="settings" description="msg:///menu_config.settings.description"
+          title="msg://com.company.timesheets/menu.application.title">
         <item view="ts_TaskType.list" title="msg://com.company.timesheets.view.tasktype/taskTypeListView.title"/>
         <item view="ts_ProjectRole.list"
               title="msg://com.company.timesheets.view.projectrole/projectRoleListView.title"/>
@@ -29,6 +30,14 @@
     </menu>
     <menu id="administration" description="msg://com.company.timesheets/menu_config.administration.description"
           title="msg://com.company.timesheets/menu_config.administration.title" icon="SERVER">
+        <menu id="jmxconsole" title="msg://com.company.timesheets/menu.jmxconsole.title">
+            <item view="jmxcon_JmxConsoleView" title="msg://io.jmix.jmxconsole/jmxConsoleView.menu"/>
+        </menu>
+        <menu id="email" title="msg://com.company.timesheets/menu.email.title">
+            <item view="email_sendingMessageView"
+                  title="msg://io.jmix.emailflowui.view.sendingmessage/sendingMessageView.menu"/>
+            <item view="email_tokenView" title="msg://io.jmix.emailflowui.view.emailtoken/emailTokenView.menu"/>
+        </menu>
         <menu id="security" title="msg://com.company.timesheets/menu.security.title">
             <item view="sec_ResourceRoleModel.list"
                   title="msg://io.jmix.securityflowui.view.resourcerole/resourceRoleModelListView.menu"/>
@@ -48,7 +57,6 @@
             <item view="datatl_dataModelListView"
                   title="msg://io.jmix.datatoolsflowui.view.datamodel/entityModelListView.title"/>
         </menu>
-        <menu id="pessimisticlock" title="msg://com.company.timesheets/menu.pessimisticlock.title">
-        </menu>
+        <menu id="pessimisticlock" title="msg://com.company.timesheets/menu.pessimisticlock.title"/>
     </menu>
 </menu-config>

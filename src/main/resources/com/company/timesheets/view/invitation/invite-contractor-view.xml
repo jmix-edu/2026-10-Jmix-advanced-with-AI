@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://inviteContractorView.title"
+      focusComponent="emailField">
+    <data>
+        <collection id="projectRolesDc" class="com.company.timesheets.entity.ProjectRole">
+            <fetchPlan extends="_base"/>
+            <loader id="projectRolesDl" readOnly="true">
+                <query>
+                    <![CDATA[select r from ts_ProjectRole r order by r.name]]>
+                </query>
+            </loader>
+        </collection>
+    </data>
+    <facets>
+        <dataLoadCoordinator auto="true"/>
+    </facets>
+    <layout>
+        <span id="projectText"/>
+        <formLayout id="form">
+            <responsiveSteps>
+                <responsiveStep minWidth="0" columns="1"/>
+                <responsiveStep minWidth="30em" columns="2"/>
+            </responsiveSteps>
+            <textField id="firstNameField" label="msg://firstName.label"/>
+            <textField id="lastNameField" label="msg://lastName.label"/>
+            <emailField id="emailField" label="msg://email.label" required="true" colspan="2"/>
+            <!-- Not bound to a container, so the entity is given by metaClass. -->
+            <entityComboBox id="projectRoleField" label="msg://projectRole.label" required="true"
+                            metaClass="ts_ProjectRole" itemsContainer="projectRolesDc"/>
+            <datePicker id="contractEndDateField" label="msg://contractEndDate.label" required="true"/>
+        </formLayout>
+        <hbox id="dialogActions">
+            <button id="inviteButton" text="msg://invite.text" themeNames="primary" icon="ENVELOPE_O"/>
+            <button id="cancelButton" text="msg:///actions.Cancel"/>
+        </hbox>
+    </layout>
+</view>

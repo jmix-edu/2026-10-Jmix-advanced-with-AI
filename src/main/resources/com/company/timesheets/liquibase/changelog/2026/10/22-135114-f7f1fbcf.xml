@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS"
+        logicalFilePath="com/company/timesheets/liquibase/changelog/2026/10/22-135114-f7f1fbcf.xml">
+    <changeSet id="1" author="ts">
+        <createTable tableName="TS_CONTRACTOR_INVITATION">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_TS_CONTRACTOR_INVITATION"/>
+            </column>
+            <column name="VERSION" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROJECT_ROLE_ID" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="INVITED_BY_ID" type="UUID"/>
+            <column name="CREATED_BY" type="VARCHAR(255)"/>
+            <column name="CREATED_DATE" type="${offsetDateTime.type}"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="ts">
+        <addColumn tableName="TS_USER">
+            <column name="CONTRACT_END_DATE" type="DATE"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="3" author="ts">
+        <createIndex indexName="IDX_TS_CONTRACTOR_INVITATION_ON_INVITED_BY" tableName="TS_CONTRACTOR_INVITATION">
+            <column name="INVITED_BY_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="INVITED_BY_ID" baseTableName="TS_CONTRACTOR_INVITATION"
+                                 constraintName="FK_TS_CONTRACTOR_INVITATION_ON_INVITED_BY" onDelete="SET NULL"
+                                 referencedColumnNames="ID" referencedTableName="TS_USER"/>
+    </changeSet>
+    <changeSet id="4" author="ts">
+        <createIndex indexName="IDX_TS_CONTRACTOR_INVITATION_ON_PROJECT" tableName="TS_CONTRACTOR_INVITATION">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="TS_CONTRACTOR_INVITATION"
+                                 constraintName="FK_TS_CONTRACTOR_INVITATION_ON_PROJECT" referencedColumnNames="ID"
+                                 referencedTableName="TS_PROJECT"/>
+    </changeSet>
+    <changeSet id="5" author="ts">
+        <createIndex indexName="IDX_TS_CONTRACTOR_INVITATION_ON_PROJECT_ROLE" tableName="TS_CONTRACTOR_INVITATION">
+            <column name="PROJECT_ROLE_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ROLE_ID" baseTableName="TS_CONTRACTOR_INVITATION"
+                                 constraintName="FK_TS_CONTRACTOR_INVITATION_ON_PROJECT_ROLE" referencedColumnNames="ID"
+                                 referencedTableName="TS_PROJECT_ROLE"/>
+    </changeSet>
+    <changeSet id="6" author="ts">
+        <createIndex indexName="IDX_TS_CONTRACTOR_INVITATION_ON_USER_PROJECT" tableName="TS_CONTRACTOR_INVITATION"
+                     unique="true">
+            <column name="USER_ID"/>
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="7" author="ts">
+        <addForeignKeyConstraint baseColumnNames="USER_ID" baseTableName="TS_CONTRACTOR_INVITATION"
+                                 constraintName="FK_TS_CONTRACTOR_INVITATION_ON_USER" onDelete="CASCADE"
+                                 referencedColumnNames="ID" referencedTableName="TS_USER"/>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,208 @@
+= 03_access_control / 06 — Вход через LDAP с синхронизацией
+:toc:
+:status: реализовано
+
+== Цель
+
+Сотрудники входят паролем из LDAP. При каждом входе их учётная запись в
+приложении создаётся или обновляется по LDAP: имя, фамилия, email и роли
+по группам. Учётные записи, которые живут только в приложении (admin,
+демо, самозарегистрированные, приглашённые подрядчики), входят как
+раньше.
+
+== В области
+
+* Стратегия синхронизации пользователя при входе.
+* Соответствие групп LDAP и ролей приложения.
+* Правило, кто входит паролем из базы, а кто — через LDAP.
+* Тесты синхронизации и выбора способа входа без живого LDAP.
+
+== Вне области
+
+* Пакетная синхронизация по расписанию (`groupForSynchronization`,
+  `LdapUserSynchronizationManager`) и отключение уволенных.
+* Active Directory, LDAPS, SSO и OIDC (Keycloak).
+* Смена пароля LDAP из приложения.
+* Роль «Руководитель проекта» для LDAP-пользователей, см. вопрос 3.
+
+== Что уже есть
+
+Проверено по исходникам `jmix-ldap` 3.0.2 и по демо-серверу (только
+чтение):
+
+* Аддон подключён (`jmix-ldap-starter`), настройки `jmix.ldap.*` в
+  `application.properties`: `ldap://localhost:1389`,
+  `dc=example,dc=org`, пользователи `(uid={0})` в `ou=users`, группы
+  `(member={0})` в `ou=users`.
+* Демо-каталог (`ts-openldap`, osixia/openldap):
+** пользователи `ivanov` (Ivan Ivanov), `petrova` (Olga Petrova),
+   `sidorov` (Pavel Sidorov) с `givenName`, `sn`, `mail`;
+** у ivanov и petrova атрибут `employeeType` = `own-time-entries`,
+   `project-participation` — коды row-level ролей;
+** группы `groupOfNames`: `employees` (ivanov, petrova), `accounting`
+   (petrova), `admins` (sidorov), `division` (все трое).
+* *Синхронизация при входе включена по умолчанию*:
+  `jmix.ldap.synchronize-user-on-login=true`,
+  `jmix.ldap.synchronize-role-assignments=true`. Но работает она, только
+  если в контексте есть бин `LdapUserDetailsSynchronizationStrategy`
+  (`UserDetailsServiceLdapUserDetailsMapper`), а его в проекте нет. Сейчас
+  LDAP-пользователь проходит проверку пароля и сразу получает «Bad
+  credentials»: в базе такого пользователя нет.
+* Основа для стратегии — `AbstractLdapUserDetailsSynchronizationStrategy`:
+  находит или создаёт пользователя, вызывает `mapUserDetailsAttributes`,
+  сравнивает назначения ролей с группами и добавляет недостающие, *а
+  лишние удаляет*. Всё одним сохранением через `UnconstrainedDataManager`.
+* Группы становятся authorities без префикса и в исходном регистре
+  (`JmixLdapAuthoritiesPopulator`: `rolePrefix=""`,
+  `convertToUpperCase=false`): `employees`, `accounting`, `admins`,
+  `division`. `JmixLdapGrantedAuthoritiesMapper` превращает их в роли:
+  через бин `LdapAuthorityToJmixRoleCodesMapper`, если он есть, иначе код
+  группы = код роли. Неизвестные коды пропускаются.
+* Дополнительные роли из атрибутов пользователя даёт бин
+  `LdapUserAdditionalRoleProvider` — подходит для `employeeType`.
+* *Кто входит паролем из базы.* `LdapSecurityConfiguration` слушает
+  `PreAuthenticationCheckEvent` и отказывает в проверке по базе всем, кого
+  нет в `jmix.ldap.standard-authentication-users`. Сейчас там admin,
+  alice, boris, chen, dana. erik, самозарегистрированные (03/03) и
+  приглашённые подрядчики (03/05) войти не смогут, автоматический вход
+  после активации тоже сломается. Список статический, а адреса
+  саморегистрации заранее неизвестны (вопрос 1).
++
+Подтверждено прогоном тестов на текущем дереве с аддоном: 135 тестов, 1
+падение — `ContractorInvitationTest.signingInStopsTheDayAfterTheContractEnds`.
+Активированный подрядчик с верным паролем получает `BadCredentialsException`
+от `LdapAuthenticationProvider`: проверка по базе ему запрещена, а в LDAP его
+нет. В приложении то же случится с входом erik, самозарегистрированных и
+приглашённых.
+
+== Синхронизация
+
+`TimesheetsLdapUserSynchronizationStrategy extends
+AbstractLdapUserDetailsSynchronizationStrategy<User>` (`@Component`, пакет
+`security`):
+
+* `username` = `uid`;
+* `firstName` ← `givenName`, `lastName` ← `sn`, `email` ← `mail`;
+* `active = true`, `needsActivation = false`;
+* пароль в базе не хранится (`null`): проверяет LDAP;
+* у существующего пользователя обновляются имя, фамилия и email,
+  остальное (часовой пояс, срок договора) не трогается.
+
+== Роли
+
+`TimesheetsLdapRoleMapper implements LdapAuthorityToJmixRoleCodesMapper`:
+
+[cols="1,2",options="header"]
+|===
+| Группа LDAP | Роли приложения
+| `employees` | `employee` + `project-participation` + `own-time-entries`
+| `accounting` | `month-closing`
+| `admins` | `system-full-access`
+| `division` | — (общая группа, ролей не даёт)
+| другие | —
+|===
+
+Row-level роли «Сотрудника» идут из группы, а не только из
+`employeeType` (вопрос 2): без них сотрудник видел бы все проекты и
+списания.
+
+`EmployeeTypeRoleProvider implements LdapUserAdditionalRoleProvider`:
+значения `employeeType` → дополнительные authorities с теми же кодами,
+маппер пропускает их как есть, если это код row-level роли. Так атрибут из
+демо-каталога тоже работает. Коды, которых нет в приложении, отбрасываются
+без ошибки.
+
+Синхронизация ролей *заменяет* назначения LDAP-пользователя. Роль,
+выданную вручную в «Users», следующий вход снимет. Это поведение аддона,
+не меняю (вопрос 3).
+
+== Кто входит паролем из базы
+
+Вместо статического списка: паролем из базы входит тот, у кого в базе
+есть пароль. LDAP-пользователи пароля в базе не имеют (см. синхронизацию) и
+проверяются только LDAP.
+
+* Бин `TimesheetsLdapSecurityConfiguration extends LdapSecurityConfiguration`
+  (`@Configuration`). Автоконфигурация аддона уступает ему место
+  (`@ConditionalOnMissingBean(LdapSecurityConfiguration.class)`).
+  Переопределён только `onPreAuthenticationCheckEvent`: отказ, если пароль
+  в базе пустой, плюс исключения из `standard-authentication-users`, как
+  раньше.
+* `jmix.ldap.standard-authentication-users` остаётся как есть: эти
+  пользователи по-прежнему входят по базе, даже если в LDAP окажется
+  одноимённый.
+* Порядок проверок у аддона — сначала база, потом LDAP. Для
+  LDAP-пользователя проверка по базе отказывает, и `ProviderManager`
+  переходит к LDAP.
+* Срок договора (03/05) проверяется для обоих путей: `isAccountNonExpired`
+  читает `User`, который возвращает синхронизация.
+
+== Тесты
+
+`LdapSynchronizationTest` (`@SpringBootTest`, без живого LDAP: контекст
+пользователя — `DirContextAdapter` с атрибутами):
+
+* новый пользователь: создаётся с `uid`, именем, фамилией, email, без
+  пароля, активный;
+* существующий: имя и email обновляются, срок договора и часовой пояс не
+  меняются;
+* группы `employees` и `accounting` → роли `employee`,
+  `project-participation`, `own-time-entries`, `month-closing`; `division`
+  ролей не даёт; `admins` → `system-full-access`;
+* роль, назначенная вручную и не следующая из групп, снимается
+  синхронизацией;
+* `employeeType` с неизвестным кодом не ломает синхронизацию.
+
+`LdapLoginChoiceTest`:
+
+* локальный пользователь с паролем (не из списка) входит по базе через
+  `AuthenticationManager` — erik и самозарегистрированный;
+* пользователь без пароля в базе по базе не входит (`BadCredentials`), и
+  LDAP-провайдер при недоступном сервере тоже отказывает.
+
+Вход ivanov/petrova/sidorov на живом сервере — Gate 3.
+
+== Кто что делает
+
+* Я: стратегия, маппер ролей, провайдер `employeeType`, конфигурация
+  выбора входа, тесты.
+* Studio: ничего. Сущностей и колонок нет.
+* Ничего не коммичу.
+
+== Решения ревью
+
+. Паролем из базы входит тот, у кого он в базе есть, плюс
+  `standard-authentication-users`. Принято.
+. Row-level роли сотрудника выдаются по группе `employees`, `employeeType` —
+  дополнение. Принято.
+. Синхронизация снимает роли, выданные вручную; роли «Руководитель проекта»
+  у LDAP-пользователей нет. Принимаем.
+. `accounting` → `month-closing`, `admins` → полный доступ, `division` — без
+  ролей. Принято.
+
+== Реализация
+
+* `security/TimesheetsLdapUserSynchronizationStrategy`,
+  `TimesheetsLdapRoleMapper`, `EmployeeTypeRoleProvider`,
+  `TimesheetsLdapSecurityConfiguration`.
+* В тестах `jmix.ldap.urls=ldap://localhost:1/` (закрытый порт): тесты не
+  зависят от демо-сервера.
+* Синхронизация в тестах идёт под анонимной аутентификацией, как на запросе
+  входа.
+* Побочный эффект порядка провайдеров: если LDAP недоступен, *неверный*
+  пароль локального пользователя даёт ошибку подключения к LDAP вместо
+  обычного «неверный логин или пароль». Верный пароль работает: база
+  проверяется первой.
+
+== Критерии приёмки
+
+. ivanov входит паролем из LDAP. В «Users» появляется `ivanov` с именем,
+  фамилией, email, без пароля; роли — «Employee» и две row-level.
+. petrova получает ещё «Month closing», sidorov — полный доступ.
+. Смена `givenName` в LDAP видна в приложении после следующего входа.
+. admin, alice…dana, erik, самозарегистрированный и приглашённый подрядчик
+  входят паролем из базы, как раньше; автоматический вход после
+  активации работает.
+. Неверный пароль LDAP-пользователя — обычная ошибка входа.
+. `gradle clean test` зелёный, включая `LdapSynchronizationTest` и
+  `LdapLoginChoiceTest`.

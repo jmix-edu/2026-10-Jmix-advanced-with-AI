@@ -1,0 +1,29 @@
+        Thu, 22 Oct 2026 12:01:36 +0300 (MSK)
+Date: Thu, 22 Oct 2026 12:01:36 +0300 (MSK)
+From: timesheets@localhost
+To: test@test.com
+Message-ID: <151998113.2.1792659696280@vaschenkoda-Aspire-A515-57>
+Subject: Test email
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+	boundary="----=_Part_0_95490395.1792659696262"
+
+------=_Part_0_95490395.1792659696262
+Content-Type: multipart/related; 
+	boundary="----=_Part_1_1789151185.1792659696264"
+
+------=_Part_1_1789151185.1792659696264
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><body><h1>Test email</h1></body></html>
+------=_Part_1_1789151185.1792659696264--
+
+------=_Part_0_95490395.1792659696262
+Content-Type: text/html; charset=UTF-8; name="test attachment.html"
+Content-Transfer-Encoding: 7bit
+Content-ID: <test+attachment.html>
+Content-Disposition: attachment; filename="test attachment.html"
+
+<html><body><h1>Test attachment</h1></body></html>
+------=_Part_0_95490395.1792659696262--

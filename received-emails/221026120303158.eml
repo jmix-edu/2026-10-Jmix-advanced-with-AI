@@ -1,0 +1,28 @@
+        Thu, 22 Oct 2026 12:03:03 +0300 (MSK)
+Date: Thu, 22 Oct 2026 12:03:03 +0300 (MSK)
+From: timesheets@localhost
+To: test1@test.com
+Message-ID: <1938482477.6.1792659783152@vaschenkoda-Aspire-A515-57>
+Subject: Activate your Timesheets account
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+	boundary="----=_Part_4_788216631.1792659783150"
+
+------=_Part_4_788216631.1792659783150
+Content-Type: multipart/related; 
+	boundary="----=_Part_5_953596417.1792659783150"
+
+------=_Part_5_953596417.1792659783150
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hello,
+
+to finish creating your Timesheets account, open this link and set a password:
+
+http://localhost:8080/activate?token=S4bEVU9wglmH5lkWJrXsY2BUG5sINUNUo8uCLgdNDcE
+
+The link works for 24 hours. If you did not ask for an account, ignore this email.
+------=_Part_5_953596417.1792659783150--
+
+------=_Part_4_788216631.1792659783150--

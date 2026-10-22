@@ -1,0 +1,224 @@
+= 03_access_control / 03 — Регистрация по email с активацией
+:toc:
+:status: реализована, ждёт Gate 3
+
+== Цель
+
+Человек сам заводит себе учётную запись. На экране входа есть ссылка на
+регистрацию. Он вводит email, получает письмо со ссылкой, по ссылке задаёт
+пароль. После этого учётная запись активна, роли выданы, и он сразу
+оказывается на главном экране.
+
+== В области
+
+* Ссылка «Create an account» на экране входа.
+* Публичный экран регистрации `RegistrationView`.
+* Неактивный пользователь и одноразовый токен активации со сроком.
+* Письмо со ссылкой через аддон Jmix Email и FakeSMTP.
+* Публичный экран активации `ActivationView`: пароль, активация, роли,
+  вход.
+* Тесты сервиса и доступа анонима.
+
+== Вне области
+
+* Восстановление пароля, смена email.
+* Защита от массовых регистраций: капча, лимиты, блокировка по IP.
+* Подтверждение администратором, выбор роли при регистрации.
+* HTML-шаблоны писем (аддон Reports/Templates), письма на других языках.
+* SSO.
+
+== Что уже есть
+
+Проверено по коду проекта и исходникам Jmix 3.0.2 в кэше Gradle:
+
+* `User` уже содержит `username`, `email`, `password`, `firstName`,
+  `lastName`, `active` (по умолчанию `true`) и `passwordChangeRequired`.
+  Полей для токена нет.
+* Экран входа — `LoginView` (`@Route("login")`) с `JmixLoginForm`. Вход —
+  `loginViewSupport.authenticate(AuthDetails.of(username, password))`. После
+  успеха `LoginViewSupport` сам открывает главный экран
+  (`navigateToInitialView` → `navigateToMainView`). Этим же вызовом можно войти
+  сразу после активации.
+* Неактивный пользователь войти не может: `User.isEnabled()` возвращает
+  `active`.
+* Анонимный пользователь получает `AnonymousRole` в
+  `DatabaseUserRepository.initAnonymousUser`. Сейчас роль открывает только
+  `ts_PublicDashboardView` (спека 03/02). Права на сущности у анонима нет,
+  поэтому запись идёт через `UnconstrainedDataManager` в сервисе, как в
+  дашборде.
+* Аддон Email (`io.jmix.email:jmix-email-starter` 3.0.2, в кэше Gradle):
+  `Emailer.sendEmail(EmailInfo)` отправляет синхронно,
+  `EmailInfoBuilder.create().setAddresses(...).setSubject(...).setBody(...)`.
+  SMTP — стандартные `spring.mail.*`, адрес отправителя —
+  `jmix.email.from-address`. У аддона свои таблицы (`SENDING_MESSAGE` и др.),
+  changelog в самом аддоне.
+* Роли — из спеки 03/01: «Employee» + `project-participation` +
+  `own-time-entries`. Назначение — строки `RoleAssignmentEntity`, как в
+  `DemoDataSeeder.assignRole`.
+
+== Сценарий
+
+. На экране входа под формой — ссылка «Create an account» → `/register`.
+. `RegistrationView` (`@Route("register")`, без `MainView`): поля Email,
+  First name, Last name, кнопка «Register», ссылка «Back to sign in».
+. «Register» → `RegistrationService.register(email, firstName, lastName)`:
+** email приводится к нижнему регистру и обрезается, формат проверяет
+   `EmailValidator` поля;
+** нет пользователя с таким username — создаётся `User`: `username = email`,
+   `email = email`, имя и фамилия, `active = false`, пароль — случайный
+   (войти им нельзя, его никто не знает), токен и срок;
+** есть *ожидающий активации* (`needsActivation = true`) — у него новый
+   токен и срок, остальное не меняется;
+** есть неактивный, но *не* ожидающий активации (отключён администратором)
+   — как активный: ничего не меняется, письмо не отправляется;
+** есть *активный* — ничего не меняется, письмо не отправляется;
+** во всех трёх случаях экран показывает одно и то же: «If this address can
+   be registered, we've sent a link to it.» По ответу нельзя узнать, есть ли
+   такой пользователь (вопрос 2).
+. Письмо: тема «Activate your Timesheets account», текст со ссылкой
+  `{timesheets.public-url}/activate?token=<токен>` и сроком действия.
+. По ссылке — `ActivationView` (`@Route("activate")`, без `MainView`).
+  Токен читается из `?token=` в `QueryParametersChangeEvent`:
+** токен неизвестен, истёк или уже использован — «This link is not valid
+   any more», ссылка на регистрацию, формы нет;
+** токен верный — приветствие с email и поля Password, Confirm password,
+   кнопка «Activate».
+. «Activate» → `RegistrationService.activate(token, password)`:
+** пароль не короче 8 символов и совпадает с подтверждением (проверка в
+   экране и ещё раз в сервисе);
+** токен проверяется ещё раз (его могли использовать в другой вкладке);
+** пароль шифруется `PasswordEncoder`, `active = true`,
+   `needsActivation = false`, токен и срок очищаются;
+** назначаются роли «Employee», `project-participation`, `own-time-entries`
+   (вопрос 1);
+** всё одной транзакцией.
+. Экран сразу входит под новым пользователем:
+  `loginViewSupport.authenticate(AuthDetails.of(email, password))`, и тот
+  попадает на главный экран.
+
+== Токен
+
+* 32 случайных байта из `SecureRandom`, в ссылке — Base64 URL без `=`.
+* В базе хранится не сам токен, а его SHA-256 (hex). Утечка таблицы
+  пользователей не даёт рабочих ссылок.
+* Срок — 24 часа, настройка `timesheets.registration.activation-hours`.
+* Одноразовый: при активации поле очищается.
+
+== Данные
+
+Новые атрибуты `User` (их добавляет Studio вместе с changelog):
+
+* `activationTokenHash` — String(64), уникальный индекс, nullable;
+* `activationTokenExpiresAt` — `OffsetDateTime`, nullable;
+* `needsActivation` — Boolean, not null, по умолчанию `false`. `true` у
+  пользователя, который зарегистрировался сам и ещё не активировался;
+  при активации — `false`. Отличает «ещё не активировал» от «отключён
+  администратором» (`active = false`) и нужен, чтобы позже чистить
+  неактивированные учётные записи. Сама очистка — вне этой спеки.
+
+Ни один экран администрирования их не показывает. В `user-detail-view.xml`
+Studio их не добавляет (или я убираю после неё).
+
+== Почта
+
+* `build.gradle`: `jmix-email-starter` (Studio, «Email Sending»). UI-аддон
+  `jmix-email-flowui-starter` — по желанию, для просмотра очереди писем
+  админом.
+* `application.properties`:
++
+[source,properties]
+----
+spring.mail.host=localhost
+spring.mail.port=2525
+jmix.email.from-address=timesheets@localhost
+timesheets.public-url=http://localhost:8080
+timesheets.registration.activation-hours=24
+----
+* FakeSMTP слушает 2525, потому что порт 25 требует прав root:
+  `java -jar fakeSMTP-2.0.jar -s -p 2525 -a 127.0.0.1`. Письма видны в его
+  окне и в папке `received-emails`.
+* Отправка синхронная (`sendEmail`). Если SMTP недоступен, пользователь
+  остаётся неактивным, экран показывает «We couldn't send the email. Try
+  again later.», в лог — ошибка. Повторная регистрация выдаёт новый токен.
+* В профиле `test` `Emailer` подменяется `@MockitoBean`, письма никуда не
+  уходят.
+
+== Доступ
+
+* `AnonymousRole` + `@ViewPolicy` на `ts_RegistrationView` и
+  `ts_ActivationView`.
+* Ни одной политики на сущности: сервис пишет через
+  `UnconstrainedDataManager`.
+* Вошедший пользователь, открывший `/register` или `/activate`, сразу
+  переходит на главный экран.
+
+== Сообщения
+
+`view.registration`, `view.activation`, `service` (тема и текст письма):
+подписи полей, кнопок, ссылок, тексты результатов. Ссылка на экране входа —
+`view.login/createAccount.text`.
+
+== Тесты
+
+`RegistrationServiceTest` (`@SpringBootTest`, `Emailer` — `@MockitoBean`,
+вызовы от лица анонима, как в 03/02):
+
+* регистрация создаёт неактивного пользователя с username = email в нижнем
+  регистре, хэшем токена и сроком; уходит одно письмо, в тексте — ссылка с
+  токеном, хэш которого совпадает с сохранённым;
+* повторная регистрация неактивного — новый токен, старый больше не
+  работает;
+* регистрация на адрес активного пользователя ничего не меняет и письма не
+  шлёт;
+* активация: пароль подходит к `PasswordEncoder.matches`, `active = true`,
+  токен очищен, у пользователя три назначения ролей;
+* второй раз тем же токеном, просроченный, неизвестный токен, пароль короче
+  8 символов — отказ, пользователь не меняется;
+* ошибка `Emailer` не ломает регистрацию: пользователь неактивен,
+  исключение превращается в понятный результат.
+
+`RegistrationUiTest` (`@UiTest` от анонима):
+
+* у анонима есть доступ к `ts_RegistrationView`, `ts_ActivationView` и
+  дашборду, и только к ним;
+* `ActivationView` с неверным токеном показывает сообщение и не показывает
+  форму.
+
+Письмо в FakeSMTP, переход по ссылке и вход — Gate 3.
+
+== Кто что делает
+
+* Studio (ведущий): аддон «Email Sending» с UI — сделано; атрибуты `User`
+  (`activationTokenHash`, `activationTokenExpiresAt`, `needsActivation`) и
+  changelog.
+* Я: экраны регистрации и активации, ссылка на входе, `RegistrationService`,
+  токен, письмо, роль анонима, свойства, сообщения, тесты.
+* FakeSMTP запускает автор.
+* Ничего не коммичу.
+
+== Решения по ревью
+
+. Роли при активации — «Employee» + `project-participation` +
+  `own-time-entries`.
+. Ответ на регистрацию одинаковый для любого адреса.
+. В базе — SHA-256 токена.
+. Вошедшего пользователя `/register` и `/activate` переводят на главный
+  экран.
+. Автор добавляет флаг `needsActivation` для будущей очистки
+  неактивированных.
+
+== Критерии приёмки
+
+. На экране входа есть «Create an account», он ведёт на `/register` без
+  входа.
+. После регистрации в «Users» есть неактивный пользователь с этим email, в
+  FakeSMTP — письмо со ссылкой.
+. Ссылка открывает экран активации без входа. После задания пароля
+  пользователь сразу на главном экране, в меню — разделы роли «Employee».
+. Повторный переход по той же ссылке — «This link is not valid any more».
+. Через 24 часа ссылка не работает. В тестах это проверяется сдвигом срока.
+. Войти неактивным пользователем нельзя, активированным с новым паролем —
+  можно.
+. Аноним открывает только дашборд, регистрацию и активацию.
+. `gradle clean test` зелёный, включая `RegistrationServiceTest` и
+  `RegistrationUiTest`.

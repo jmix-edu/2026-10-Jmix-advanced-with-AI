@@ -12,6 +12,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.router.Route;
 import io.jmix.core.MetadataTools;
+import io.jmix.core.security.CurrentAuthentication;
 import io.jmix.core.usersubstitution.CurrentUserSubstitution;
 import io.jmix.flowui.DialogWindows;
 import io.jmix.flowui.component.combobox.EntityComboBox;
@@ -59,6 +60,8 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
     // Своё списание: пользователь всегда текущий и не меняется. Флаг ставят до показа формы:
     // сеттером, когда форму открывают диалогом, или параметром адреса при навигации.
     private boolean ownTimeEntry = false;
+    @Autowired
+    private CurrentAuthentication currentAuthentication;
 
     // Вызывают до открытия диалога: dialogWindow.getView().setOwnTimeEntry(true)
     public void setOwnTimeEntry(boolean ownTimeEntry) {
@@ -94,6 +97,7 @@ public class TimeEntryDetailView extends StandardDetailView<TimeEntry> {
 
     @Subscribe("userField.assignSelf")
     public void onUserFieldAssignSelf(final ActionPerformedEvent event) {
+//        getEditedEntity().setUser((User) currentAuthentication.getUser());
         getEditedEntity().setUser((User) currentUserSubstitution.getEffectiveUser());
     }
 

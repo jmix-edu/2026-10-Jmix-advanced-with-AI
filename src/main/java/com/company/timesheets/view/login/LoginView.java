@@ -1,5 +1,7 @@
 package com.company.timesheets.view.login;
 
+import com.company.timesheets.entity.User;
+import com.company.timesheets.service.RegistrationService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.login.AbstractLogin.LoginEvent;
 import com.vaadin.flow.component.login.LoginI18n;
@@ -10,6 +12,8 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import io.jmix.core.CoreProperties;
 import io.jmix.core.MessageTools;
+import io.jmix.core.UnconstrainedDataManager;
+import io.jmix.core.metamodel.datatype.DatatypeFormatter;
 import io.jmix.core.security.AccessDeniedException;
 import io.jmix.flowui.Notifications;
 import io.jmix.flowui.component.loginform.JmixLoginForm;
@@ -23,10 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.function.Function;
@@ -50,6 +56,12 @@ public class LoginView extends StandardView implements LocaleChangeObserver {
 
     @Autowired
     private Notifications notifications;
+
+    @Autowired
+    private UnconstrainedDataManager unconstrainedDataManager;
+
+    @Autowired
+    private DatatypeFormatter datatypeFormatter;
 
     @ViewComponent
     private JmixLoginForm login;
@@ -107,10 +119,29 @@ public class LoginView extends StandardView implements LocaleChangeObserver {
                             .withLocale(login.getSelectedLocale())
                             .withRememberMe(login.isRememberMe())
             );
+        } catch (final AccountExpiredException e) {
+            // Spec 03/05: the password was right, the contract is over; say so instead of "incorrect password".
+            log.warn("Login of '{}' refused: contract ended", event.getUsername());
+            notifications.create(contractEndedMessage(event.getUsername()))
+                    .withType(Notifications.Type.WARNING)
+                    .show();
+            event.getSource().setEnabled(true);
         } catch (final BadCredentialsException | DisabledException | LockedException | AccessDeniedException e) {
             log.warn("Login failed for user '{}': {}", event.getUsername(), e.toString());
             event.getSource().setError(true);
         }
+    }
+
+    private String contractEndedMessage(String username) {
+        LocalDate endDate = unconstrainedDataManager.load(User.class)
+                .query("select u from ts_User u where u.username = :username")
+                .parameter("username", RegistrationService.normalize(username))
+                .optional()
+                .map(User::getContractEndDate)
+                .orElse(null);
+        return endDate == null
+                ? messageBundle.getMessage("contractEnded")
+                : messageBundle.formatMessage("contractEndedOn", datatypeFormatter.formatLocalDate(endDate));
     }
 
     @Override

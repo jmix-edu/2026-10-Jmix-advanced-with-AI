@@ -22,7 +22,8 @@ public interface ProjectManagerRole extends EmployeeRole {
     String CODE = "project-manager";
 
     @MenuPolicy(menuIds = {"ts_Task.list", "ts_TimeEntry.list"})
-    @ViewPolicy(viewIds = {"ts_Task.list", "ts_Task.detail", "ts_ProjectParticipant.detail", "ts_TimeEntry.list"})
+    @ViewPolicy(viewIds = {"ts_Task.list", "ts_Task.detail", "ts_ProjectParticipant.detail", "ts_TimeEntry.list",
+            "ts_InviteContractorView"})
     void managerScreens();
 
     @EntityAttributePolicy(entityClass = Task.class, attributes = "*", action = EntityAttributePolicyAction.MODIFY)

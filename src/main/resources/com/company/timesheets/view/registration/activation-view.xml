@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://activationView.title">
+    <layout justifyContent="CENTER" alignItems="CENTER" classNames="jmix-login-main-layout">
+        <vbox id="activationBox" classNames="registration-box" padding="false">
+            <h2 text="msg://activationView.title"/>
+            <!-- Shown for a valid link. -->
+            <vbox id="activationForm" padding="false" visible="false" width="100%">
+                <span id="welcomeText"/>
+                <!-- An invited contractor (spec 03/05) sees the projects they will join. -->
+                <span id="invitedText" visible="false"/>
+                <passwordField id="passwordField" label="msg://password.label" required="true" width="100%"/>
+                <passwordField id="confirmPasswordField" label="msg://confirmPassword.label" required="true"
+                               width="100%"/>
+                <button id="activateButton" text="msg://activate.text" themeNames="primary" width="100%"/>
+            </vbox>
+            <!-- Shown for an unknown, expired or used link. -->
+            <vbox id="invalidLinkBox" padding="false" visible="false" width="100%">
+                <span text="msg://linkInvalid"/>
+                <anchor id="registerLink" href="register" text="msg://registerAgain.text"/>
+            </vbox>
+        </vbox>
+    </layout>
+</view>

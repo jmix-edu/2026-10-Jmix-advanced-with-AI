@@ -16,6 +16,11 @@ public final class TimesheetsPolicies {
      */
     public static final String APPROVE_ANY_TIME_ENTRY = "ts.timeEntry.approveAny";
 
+    /**
+     * Invite a contractor to any project, not only to one the user manages (admin), spec 03/05.
+     */
+    public static final String INVITE_CONTRACTOR_ANYWHERE = "ts.contractor.inviteAny";
+
     private TimesheetsPolicies() {
     }
 }

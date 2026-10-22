@@ -14,6 +14,7 @@ import io.jmix.core.DataManager;
 import io.jmix.core.LoadContext;
 import io.jmix.core.Messages;
 import io.jmix.core.Metadata;
+import io.jmix.core.security.CurrentAuthentication;
 import io.jmix.core.usersubstitution.CurrentUserSubstitution;
 import io.jmix.flowui.UiComponents;
 import io.jmix.flowui.app.main.StandardMainView;
@@ -41,12 +42,17 @@ public class MainView extends StandardMainView {
     private Metadata metadata;
     @Autowired
     private DataManager dataManager;
+    @Autowired
+    private CurrentAuthentication currentAuthentication;
 
     @Install(to = "userMenu", subject = "buttonRenderer")
     private Component userMenuButtonRenderer(final UserDetails userDetails) {
         if (!(userDetails instanceof User user)) {
             return null;
         }
+
+        final User user1 = (User) currentAuthentication.getUser();
+        final User user2 = (User) currentUserSubstitution.getEffectiveUser();
 
         String userName = generateUserName(user);
 

@@ -11,8 +11,11 @@ import io.jmix.security.authentication.JmixUserDetails;
 import io.jmix.security.user.PasswordChangeRequired;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.security.core.GrantedAuthority;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
@@ -28,6 +31,20 @@ public class User implements JmixUserDetails, HasTimeZone {
     @Column(name = "ID", nullable = false)
     @JmixGeneratedValue
     private UUID id;
+
+    @Column(name = "ACTIVATION_TOKEN_HASH", length = 64)
+    private String activationTokenHash;
+
+    @Column(name = "ACTIVATION_TOKEN_EXPIRES_AT")
+    private OffsetDateTime activationTokenExpiresAt;
+
+    @Column(name = "NEEDS_ACTIVATION", nullable = false)
+    @NotNull
+    private Boolean needsActivation = false;
+
+    // Last day a contractor may sign in (spec 03/05); empty means no limit.
+    @Column(name = "CONTRACT_END_DATE")
+    private LocalDate contractEndDate;
 
     @Version
     @Column(name = "VERSION", nullable = false)
@@ -63,6 +80,30 @@ public class User implements JmixUserDetails, HasTimeZone {
 
     @Transient
     private Collection<? extends GrantedAuthority> authorities;
+
+    public Boolean getNeedsActivation() {
+        return needsActivation;
+    }
+
+    public void setNeedsActivation(Boolean needsActivation) {
+        this.needsActivation = needsActivation;
+    }
+
+    public OffsetDateTime getActivationTokenExpiresAt() {
+        return activationTokenExpiresAt;
+    }
+
+    public void setActivationTokenExpiresAt(OffsetDateTime activationTokenExpiresAt) {
+        this.activationTokenExpiresAt = activationTokenExpiresAt;
+    }
+
+    public String getActivationTokenHash() {
+        return activationTokenHash;
+    }
+
+    public void setActivationTokenHash(String activationTokenHash) {
+        this.activationTokenHash = activationTokenHash;
+    }
 
     public void setUsername(String username) {
         this.username = username;
@@ -147,9 +188,21 @@ public class User implements JmixUserDetails, HasTimeZone {
         this.authorities = authorities;
     }
 
+    /**
+     * False from the day after the contract end date: Spring Security then refuses sign-in with
+     * AccountExpiredException. The end date itself is still a working day; "today" is the server's date.
+     */
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return contractEndDate == null || !LocalDate.now().isAfter(contractEndDate);
+    }
+
+    public LocalDate getContractEndDate() {
+        return contractEndDate;
+    }
+
+    public void setContractEndDate(LocalDate contractEndDate) {
+        this.contractEndDate = contractEndDate;
     }
 
     @Override

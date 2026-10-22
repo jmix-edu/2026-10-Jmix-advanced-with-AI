@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS"
+        logicalFilePath="com/company/timesheets/liquibase/changelog/2026/10/22-115647-f7f1fbcf.xml">
+    <changeSet id="1" author="ts">
+        <addColumn tableName="TS_USER">
+            <column name="ACTIVATION_TOKEN_EXPIRES_AT" type="${offsetDateTime.type}"/>
+            <column name="ACTIVATION_TOKEN_HASH" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="2" author="ts">
+        <addColumn tableName="TS_USER">
+            <column name="NEEDS_ACTIVATION" type="BOOLEAN"/>
+        </addColumn>
+
+        <addNotNullConstraint columnName="NEEDS_ACTIVATION" defaultNullValue="false" tableName="TS_USER"/>
+    </changeSet>
+</databaseChangeLog>

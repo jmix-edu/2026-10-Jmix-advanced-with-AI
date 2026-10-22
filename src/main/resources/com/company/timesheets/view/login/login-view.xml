@@ -16,5 +16,6 @@
                           username="msg://loginForm.errorUsername"
                           password="msg://loginForm.errorPassword"/>
         </loginForm>
+        <anchor id="createAccountLink" href="register" text="msg://createAccount.text"/>
     </layout>
 </view>
