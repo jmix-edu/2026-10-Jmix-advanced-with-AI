@@ -54,7 +54,19 @@ dependencies {
     implementation 'io.jmix.datatools:jmix-datatools-flowui-starter'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'com.vaadin:vaadin-dev'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Secrets of the prod profile (spec 04/01); Spring Cloud 2025.1.x is the line for Spring Boot 4.0
+    implementation platform('org.springframework.cloud:spring-cloud-dependencies:2025.1.3')
+    implementation 'org.springframework.cloud:spring-cloud-starter-vault-config'
+
+//    implementation 'org.springframework.boot:spring-boot-starter-undertow'
+//
+//    modules {
+//        module("org.springframework.boot:spring-boot-starter-tomcat") {
+//            replacedBy("org.springframework.boot:spring-boot-starter-undertow")
+//        }
+//    }
 
 
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
@@ -84,4 +96,12 @@ idea {
 vaadin {
     optimizeBundle = false
     productionMode = false
+}
+
+// Dev tools only outside the production build: ./gradlew -Pvaadin.productionMode=true bootJar (spec 04/01).
+// Placed after the vaadin block so that the effective mode is read with the settings above.
+if (!vaadin.effective.productionMode.get()) {
+    dependencies {
+        implementation 'com.vaadin:vaadin-dev'
+    }
 }

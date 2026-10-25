@@ -1,0 +1,320 @@
+= 04_deployment_operations / 02 — Docker-образ и compose
+:toc:
+:status: реализовано, стек проверен
+
+== Цель
+
+`docker compose up -d` на чистой машине, где есть только Docker, собирает
+образ приложения и поднимает весь стек: приложение с профилем `prod`, две
+PostgreSQL и Vault. Пароли генерируются при первом старте и не лежат ни в
+образе, ни в репозитории. Данные баз переживают перезапуск и пересоздание
+контейнеров.
+
+== В области
+
+* `Dockerfile` приложения: сборка внутри Docker, production-фронтенд,
+  многослойный образ.
+* `compose.yaml`: приложение, `main-db`, `reports-db`, `vault`, демо-LDAP
+  `ldap` и три одноразовых init-сервиса.
+* Генерация паролей и доставка их в базы и Vault при первом старте.
+* Vault в серверном режиме с хранилищем на томе. Приложение входит по AppRole
+  (решение 4 спеки 01).
+* Порядок старта по готовности, healthcheck приложения по Actuator.
+* README, раздел «Запуск в Docker».
+
+== Вне области
+
+* Кластер, балансировщик, несколько экземпляров приложения.
+* Keycloak, почта: SMTP в compose нет, письма не уходят (см. «Почта и LDAP»).
+* Автоматическое распечатывание Vault через KMS/HSM, TLS для Vault, ротация
+  секретов.
+* Публикация образа в реестр, CI.
+
+== Что уже есть
+
+Проверено по репозиторию, локальному Docker и плагинам Spring Boot 4.0.8.
+
+* Профиль `prod` (спека 01): адреса из переменных окружения, пароли из Vault
+  (`secret/timesheets`), `AdminPasswordInitializer`, Actuator `health` и
+  `info` без входа. Vault подключается через `spring.config.import=vault://`,
+  способ входа сейчас жёстко `TOKEN`.
+* Production-сборка: `./gradlew -Pvaadin.productionMode=true bootJar`.
+  Вручную проверено, что jar стартует в production-режиме за 15–20 с.
+* `bootJar` слоистый по умолчанию (`LayeredSpec`), в jar входит jarmode
+  `tools` (`includeTools`), так что `java -Djarmode=tools -jar app.jar extract --layers`
+  доступен.
+* Файлы клиентов (`FileRef`) хранит `jmix-localfs`, каталог —
+  `jmix.localfs.storage-dir`. В контейнере без тома файлы пропадут вместе с
+  ним.
+* LDAP-учётка обязательна: без `manager-dn` и пароля контекст не поднимается
+  (видно по тестам спеки 01). Отключить LDAP нельзя:
+  `TimesheetsLdapSecurityConfiguration` требует его бины.
+* Почта: `MAIL_HOST` обязателен в `prod`, но health почты выключен, а
+  неотправленное письмо регистрация показывает как ошибку отправки
+  (`MAIL_FAILED`).
+
+== Образ: свой Dockerfile, а не bootBuildImage
+
+[cols="1,2,2",options="header"]
+|===
+| | `bootBuildImage` (Paketo) | Свой `Dockerfile`
+| Где собирается | Gradle на хосте: нужен JDK и доступ Gradle к Docker | Внутри Docker: на хосте нужен только Docker, `compose up --build` собирает сам
+| Базовый образ | В Boot 4 по умолчанию `paketobuildpacks/builder-noble-java-tiny`: без shell, `curl`, `wget` | `eclipse-temurin:21-jre` (Ubuntu): есть `curl` для healthcheck и `sh` для entrypoint
+| Healthcheck в compose | Нужен отдельный buildpack health-checker или другой builder | `curl -f /actuator/health`
+| Чтение AppRole из файла перед стартом | Нет shell, только через свой launcher | `sh`-entrypoint из трёх строк
+| Слои | Автоматически | `jarmode=tools extract --layers`, четыре `COPY`
+| Плюсы | Без Dockerfile, SBOM, калькулятор памяти | Прозрачно, предсказуемо, без загрузки builder-образов на сотни мегабайт
+|===
+
+Выбираю свой `Dockerfile`. Решают три вещи: одна команда без JDK на хосте,
+healthcheck через `curl` и `sh`-entrypoint для AppRole. В tiny-образе Paketo
+ни того, ни другого нет.
+
+=== Dockerfile, три стадии
+
+. `build` — `eclipse-temurin:21-jdk`. Копирует проект и запускает
+  `./gradlew --no-daemon -Pvaadin.productionMode=true bootJar`. Кэши Gradle и
+  Vaadin (`/root/.gradle`, `/root/.vaadin`: Node и npm) — BuildKit
+  `--mount=type=cache`, пересборка после правки кода не качает всё заново.
+. `extract` — `java -Djarmode=tools -jar app.jar extract --layers --launcher`.
+. `runtime` — `eclipse-temurin:21-jre`. Слои копируются от редко к часто
+  меняющимся: `dependencies`, `spring-boot-loader`, `snapshot-dependencies`,
+  `application`. При правке кода меняется только последний слой.
+  Непривилегированный пользователь `app`, `EXPOSE 8080`,
+  `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75`, `ENTRYPOINT` —
+  `docker/app-entrypoint.sh`.
+
+* `.dockerignore` исключает `build`, `.gradle`, `node_modules`, `.idea`,
+  `.jmix`, `received-emails`, `fakesmtp-2.0.jar`, `secrets` и `src/test`.
+* Теги образов закрепляю при реализации конкретными версиями (как
+  `hashicorp/vault:2.1.2`).
+* Тестов при сборке образа нет (`bootJar` их не запускает). Тесты — Gate 2 на
+  хосте.
+
+== Compose
+
+[cols="1,3",options="header"]
+|===
+| Сервис | Что делает
+| `secrets-init` | Одноразовый. Генерирует пароли в том `secrets`, если их ещё нет. Завершается.
+| `main-db` | `postgres:17`, база `ts`, пользователь `ts`, пароль из файла (`POSTGRES_PASSWORD_FILE`). Том `main-db-data`. Healthcheck `pg_isready`.
+| `reports-db` | То же для базы `ts_reports`, пользователь `ts_reports`. Том `reports-db-data`.
+| `vault` | `hashicorp/vault:2.1.2`, серверный режим, хранилище `file` на томе `vault-data`. Healthcheck: API отвечает, даже если Vault запечатан.
+| `ldap` | `osixia/openldap:1.5.0`, каталог спеки 03/06 из `docker/ldap/50-timesheets.ldif` при первом старте. Пароли admin и cn=config из файлов (`LDAP_ADMIN_PASSWORD_FILE`, `LDAP_CONFIG_PASSWORD_FILE`). Тома `ldap-data`, `ldap-config`.
+| `ldap-init` | Одноразовый, после `ldap`. Ставит ivanov, petrova и sidorov пароль из тома `secrets` (`ldappasswd`), на каждом старте.
+| `vault-init` | Одноразовый, после `vault` и `secrets-init`. Инициализирует или распечатывает Vault, кладёт секреты, готовит AppRole. Завершается.
+| `app` | Образ из `Dockerfile`. Стартует после `main-db` и `reports-db` (healthy) и `vault-init` (completed successfully). Healthcheck по Actuator. Тома `app-files` (файлы клиентов) и `vault-approle` (только чтение).
+|===
+
+* Наружу опубликован только порт приложения: `${APP_PORT:-8080}:8080`. Базы
+  и Vault доступны только во внутренней сети compose, порты 5432 и 8200
+  хоста не заняты: локальный `ts-vault` на 8200 не мешает.
+* `restart: unless-stopped` у долгоживущих сервисов.
+* Пересоздание контейнеров (`docker compose down` и `up`) данные не трогает:
+  всё в именованных томах. `docker compose down -v` удаляет всё, включая
+  пароли и ключи Vault, — в README это предупреждение.
+
+=== Порядок старта
+
+[source]
+----
+secrets-init ──► main-db (healthy) ────────────┐
+             ├─► reports-db (healthy) ─────────┤
+             ├─► ldap (healthy) ─► ldap-init ──┤
+             └─► vault (healthy) ─► vault-init ┴─► app (healthy)
+----
+
+`depends_on` с условиями `service_completed_successfully` и
+`service_healthy`. Если `vault-init` упал, приложение не стартует.
+
+=== Healthcheck приложения
+
+`curl -fsS http://localhost:8080/actuator/health`: 200 только при UP обеих
+баз. Интервал 10 с, `start_period` 120 с: первый старт с Liquibase на пустых
+базах занимает около 20 с, запас на медленные машины. `/actuator/health`
+открыт без входа (спека 01), ключи в контейнер для проверки не нужны.
+
+== Секреты
+
+Ни одного пароля в `compose.yaml`, `Dockerfile` и образе.
+
+=== Как пароли появляются
+
+`secrets-init` на первом старте пишет в том `secrets` (по файлу на пароль,
+права 0400, случайные 32 символа):
+
+* `main_db_password`, `reports_db_password`;
+* `ldap_admin_password` (он же пароль bind-учётки приложения),
+  `ldap_config_password`;
+* `admin_initial_password` и `ldap_users_password` (общий для ivanov, petrova,
+  sidorov) — выводятся в лог `secrets-init` один раз, при генерации:
+  `docker compose logs secrets-init`.
+
+Если файл уже есть, он не перезаписывается: повторный `up` ничего не меняет.
+
+=== Куда они попадают
+
+* *Базы.* `POSTGRES_PASSWORD_FILE=/secrets/main_db_password` (том
+  `secrets` смонтирован только для чтения). Официальный образ применяет
+  пароль только при инициализации пустого тома. Смена пароля потом — `ALTER
+  USER`, в README.
+* *Vault.* `vault-init` при каждом `up`:
+.. если Vault не инициализирован — `vault operator init -key-shares=1
+   -key-threshold=1`, ключ распечатывания и root-токен — в том `vault-keys`
+   (только у `vault-init`);
+.. если запечатан — распечатывает ключом из тома;
+.. под root-токеном: включает KV v2 на `secret/` (если ещё нет), политику
+   `timesheets` (чтение `secret/data/timesheets*`), AppRole `timesheets` с этой
+   политикой;
+.. `vault kv put secret/timesheets` с ключами из тома `secrets`:
+   `main.datasource.password`, `reports.datasource.password`,
+   `timesheets.admin.initial-password`, `jmix.ldap.manager-password`
+   (= `ldap_admin_password`);
+.. пишет `role_id` и `secret_id` AppRole в том `vault-approle`. `secret_id`
+   создаётся один раз, без срока жизни.
+* *Приложение.* `docker/app-entrypoint.sh` читает `role_id` и `secret_id` из
+  `/vault-approle` в переменные `VAULT_ROLE_ID` и `VAULT_SECRET_ID` и делает
+  `exec java`. Root-токена у приложения нет.
+
+Ключ распечатывания на томе рядом с данными Vault — компромисс для
+локального стека: Vault не хранит пароли в открытом виде на томе, но кто
+владеет хостом Docker, владеет и ключом. Для настоящего прода — auto-unseal,
+вне области.
+
+=== Изменения профиля prod
+
+[source,properties]
+----
+spring.cloud.vault.authentication=${VAULT_AUTHENTICATION:TOKEN}
+spring.cloud.vault.token=${VAULT_TOKEN:}
+spring.cloud.vault.app-role.role-id=${VAULT_ROLE_ID:}
+spring.cloud.vault.app-role.secret-id=${VAULT_SECRET_ID:}
+----
+
+Запуск по README спеки 01 (токен) не меняется. В compose
+`VAULT_AUTHENTICATION=APPROLE`. Имена свойств AppRole сверю по метаданным
+Spring Cloud Vault 5.0.2.
+
+== Почта и LDAP
+
+* *LDAP* — сервис `ldap` в compose (решение 4), `LDAP_URLS=ldap://ldap:389/`.
+  Каталог тот же, что у `ts-openldap`; паролей в LDIF нет.
+* *Почта* вне области: `MAIL_HOST=host.docker.internal`, порт 2525.
+  FakeSMTP слушает только `127.0.0.1`, поэтому из контейнера письма не
+  уйдут, регистрация покажет ошибку отправки. Health это не роняет.
+* `TIMESHEETS_PUBLIC_URL=http://localhost:${APP_PORT:-8080}`.
+
+== Остальные переменные приложения
+
+Задаются в `compose.yaml` без секретов: `SPRING_PROFILES_ACTIVE=prod`,
+`VAULT_URI=http://vault:8200`, `MAIN_DB_URL=jdbc:postgresql://main-db:5432/ts`,
+`MAIN_DB_USERNAME=ts`, `REPORTS_DB_URL=…/reports-db…`, `REPORTS_DB_USERNAME=ts_reports`,
+`MAIL_*`, `LDAP_*`, `JMIX_LOCALFS_STORAGEDIR=/app/files`.
+
+== Файлы
+
+* `Dockerfile`, `.dockerignore`, `compose.yaml` — в корне.
+* `docker/app-entrypoint.sh`, `docker/secrets-init.sh`,
+  `docker/vault/config.hcl`, `docker/vault/vault-init.sh`,
+  `docker/ldap/50-timesheets.ldif`, `docker/ldap/ldap-init.sh`.
+* `application-prod.properties` — способ входа в Vault.
+* `.gitignore`: `.env`, `secrets/`.
+* README — раздел «Запуск в Docker».
+
+== README: «Запуск в Docker»
+
+* Требования: Docker с Compose v2, свободный порт 8080 или `APP_PORT`.
+* Первый запуск: `docker compose up -d --build`, пароли admin и
+  LDAP-пользователей — `docker compose logs secrets-init`.
+* Состояние: `docker compose ps` (у `app` — `healthy`),
+  `curl localhost:8080/actuator/health`.
+* Остановка: `docker compose down` — данные остаются; `down -v` — удаляет
+  всё.
+* Обновление приложения: `docker compose up -d --build app`.
+* Если `vault` перезапустился отдельно, он запечатан. `docker compose up -d`
+  перезапустит `vault-init`, тот распечатает Vault.
+* Смена пароля базы после первого старта — `ALTER USER` и замена файла в томе
+  `secrets`.
+
+== Проверка
+
+Java-тестов нет: новой бизнес-логики нет, изменение профиля prod — одна
+строка способа входа. `gradle clean test` остаётся зелёным.
+
+Стек проверяю сам, если разрешишь, как в спеке 01: `compose up` с нуля,
+сценарии из критериев, потом `down -v` по именам этого проекта (вопрос 5).
+
+== Кто что делает
+
+* Я: Dockerfile, compose, скрипты, правка профиля prod, `.gitignore`,
+  README, проверка стека.
+* Studio: ничего.
+* Ничего не коммичу.
+
+== Решения ревью
+
+. Свой многостадийный `Dockerfile`. Принято.
+. Vault в серверном режиме, распечатывание из `vault-init`. Принято.
+. Пароли генерируются. Принято.
+. Демо-LDAP — в compose. Пароль LDAP тоже генерируется, переменная
+  `LDAP_MANAGER_PASSWORD` не нужна.
+. Проверку стека делаю сам. Принято.
+
+== Отличия реализации от черновика
+
+* *Init-сервисы на образе Vault запускаются от root* (`user: "0"`): образ
+  `hashicorp/vault:2.1.2` работает под пользователем `vault` и не может
+  писать в новые тома. Первый прогон это показал, а `secrets-init` при этом
+  завершился с кодом 0: теперь любая ошибка записи останавливает его.
+* *Файлы паролей 0444*: Postgres и slapd читают их под своими пользователями.
+  `ldappasswd` предупреждает «publicly readable»; том смонтирован только в
+  контейнеры стека, наружу не виден.
+* *Лог `secrets-init` живёт до `docker compose down`*: контейнер удаляется
+  вместе с логом. В README добавлено чтение паролей из тома через
+  `docker compose run --rm --no-deps --entrypoint cat secrets-init …`.
+* *Entrypoint копируется до слоёв приложения*: при копировании после них
+  правка кода меняла два слоя, теперь — один.
+* *Образы:* `eclipse-temurin:21.0.12.1_1-jdk-noble` / `-jre-noble`,
+  `postgres:17.11`, `hashicorp/vault:2.1.2`, `osixia/openldap:1.5.0`.
+
+== Проверка стека
+
+23.10.2026, Docker 28.2.2, Compose 2.40.3:
+
+. `docker compose up -d` после сборки: все init-сервисы — код 0, `app`,
+  `main-db`, `reports-db`, `ldap`, `vault` — healthy. Старт приложения 12 с,
+  production-режим Vaadin, «admin password set from initial-password».
+. `/actuator/health` → 200, обе базы UP; `/actuator/info` → 200;
+  `/actuator/env`, `/actuator/beans` → 403.
+. Хеш пароля admin совпадает со сгенерированным паролем, `admin` не
+  подходит. `ldapwhoami` для ivanov с паролем из тома — успех, с неверным — 49.
+. Ни один сгенерированный пароль не найден в `compose.yaml`, `Dockerfile`,
+  `docker/`, `src/main/resources`, в `docker history` и в переменных образа. В
+  окружении процесса `docker compose exec app env` нет паролей и AppRole.
+. `down` и `up`: файл в `/app/files` и строка в основной базе на месте, хеш
+  пароля admin прежний, ничего не сгенерировано заново.
+. `restart vault` → запечатан; `up -d` → `vault-init` распечатал;
+  перезапуск `app` → healthy.
+. `stop reports-db` → `app` unhealthy, 503; `start` → healthy.
+. Сборка из копии с изменённым Java-файлом: из 12 слоёв изменился только
+  `application` (18,6 МБ), `dependencies` (109 МБ) переиспользован.
+
+== Критерии приёмки
+
+. На машине без собранного проекта `docker compose up -d --build`
+  поднимает стек. `docker compose ps`: `app`, `main-db`, `reports-db`,
+  `ldap`, `vault` — healthy, init-сервисы завершились с кодом 0.
+. `curl localhost:8080/actuator/health` → UP, обе базы.
+  `/actuator/env` → 403.
+. admin входит паролем из лога `secrets-init`, `admin`/`admin` не пускает.
+  `ivanov` входит через LDAP стека паролем из лога `secrets-init`.
+. `grep -ri password compose.yaml Dockerfile docker/` — ни одного значения
+  пароля. В образе (`docker history`, `docker run … env`) паролей нет.
+. Проект и клиент с картинкой, `docker compose down`, `up -d`: данные и
+  картинка на месте, пароли прежние, admin входит тем же паролем.
+. `docker compose restart vault` и затем `docker compose up -d`: Vault
+  распечатан, приложение после перезапуска стартует.
+. Остановка `reports-db` → `app` становится unhealthy. Запуск → снова healthy.
+. Повторная сборка после правки Java-кода пересобирает только последний слой
+  образа.
+. `gradle clean test` зелёный.

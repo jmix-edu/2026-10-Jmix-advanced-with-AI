@@ -1,0 +1,173 @@
+# The whole stack with one command (spec 04/02): docker compose up -d --build
+# No passwords here: secrets-init generates them into the "secrets" volume on the first start.
+name: timesheets
+
+services:
+  secrets-init:
+    image: hashicorp/vault:2.1.2
+    # The vault image runs as the vault user; the volumes are written as root
+    user: "0"
+    entrypoint: ["/bin/sh", "/scripts/secrets-init.sh"]
+    volumes:
+      - secrets:/secrets
+      - ./docker/secrets-init.sh:/scripts/secrets-init.sh:ro
+
+  main-db:
+    image: postgres:17.11
+    environment:
+      POSTGRES_DB: ts
+      POSTGRES_USER: ts
+      POSTGRES_PASSWORD_FILE: /secrets/main_db_password
+    volumes:
+      - main-db-data:/var/lib/postgresql/data
+      - secrets:/secrets:ro
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ts -d ts"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  reports-db:
+    image: postgres:17.11
+    environment:
+      POSTGRES_DB: ts_reports
+      POSTGRES_USER: ts_reports
+      POSTGRES_PASSWORD_FILE: /secrets/reports_db_password
+    volumes:
+      - reports-db-data:/var/lib/postgresql/data
+      - secrets:/secrets:ro
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ts_reports -d ts_reports"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Demo directory: users and groups of spec 03/06, loaded on the first start
+  ldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: Timesheets
+      LDAP_DOMAIN: example.org
+      LDAP_ADMIN_PASSWORD_FILE: /secrets/ldap_admin_password
+      LDAP_CONFIG_PASSWORD_FILE: /secrets/ldap_config_password
+      LDAP_TLS: "false"
+      LDAP_SEED_INTERNAL_LDIF_PATH: /seed
+    volumes:
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+      - ./docker/ldap/50-timesheets.ldif:/seed/50-timesheets.ldif:ro
+      - secrets:/secrets:ro
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "", "-s", "base"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  ldap-init:
+    image: osixia/openldap:1.5.0
+    entrypoint: ["/bin/sh", "/scripts/ldap-init.sh"]
+    volumes:
+      - secrets:/secrets:ro
+      - ./docker/ldap/ldap-init.sh:/scripts/ldap-init.sh:ro
+    depends_on:
+      ldap:
+        condition: service_healthy
+
+  vault:
+    image: hashicorp/vault:2.1.2
+    command: server
+    volumes:
+      - vault-data:/vault/file
+      - ./docker/vault/config.hcl:/vault/config/config.hcl:ro
+    healthcheck:
+      # Up, even while sealed: vault-init unseals it
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  vault-init:
+    image: hashicorp/vault:2.1.2
+    user: "0"
+    entrypoint: ["/bin/sh", "/scripts/vault-init.sh"]
+    environment:
+      VAULT_ADDR: http://vault:8200
+    volumes:
+      - vault-keys:/vault-keys
+      - vault-approle:/vault-approle
+      - secrets:/secrets:ro
+      - ./docker/vault/vault-init.sh:/scripts/vault-init.sh:ro
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+      vault:
+        condition: service_healthy
+
+  app:
+    build: .
+    image: timesheets:0.0.1-SNAPSHOT
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      VAULT_URI: http://vault:8200
+      VAULT_AUTHENTICATION: APPROLE
+      VAULT_APPROLE_DIR: /vault-approle
+      MAIN_DB_URL: jdbc:postgresql://main-db:5432/ts
+      MAIN_DB_USERNAME: ts
+      REPORTS_DB_URL: jdbc:postgresql://reports-db:5432/ts_reports
+      REPORTS_DB_USERNAME: ts_reports
+      TIMESHEETS_PUBLIC_URL: http://localhost:${APP_PORT:-8080}
+      # Mail is out of scope: there is no SMTP server in the stack, emails are not sent
+      MAIL_HOST: host.docker.internal
+      MAIL_PORT: "2525"
+      MAIL_FROM: timesheets@localhost
+      LDAP_URLS: ldap://ldap:389/
+      LDAP_BASE_DN: dc=example,dc=org
+      LDAP_MANAGER_DN: cn=admin,dc=example,dc=org
+      JMIX_LOCALFS_STORAGEDIR: /app/files
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - app-files:/app/files
+      - vault-approle:/vault-approle:ro
+    depends_on:
+      main-db:
+        condition: service_healthy
+      reports-db:
+        condition: service_healthy
+      ldap-init:
+        condition: service_completed_successfully
+      vault-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+volumes:
+  secrets:
+  main-db-data:
+  reports-db-data:
+  ldap-data:
+  ldap-config:
+  vault-data:
+  vault-keys:
+  vault-approle:
+  app-files:

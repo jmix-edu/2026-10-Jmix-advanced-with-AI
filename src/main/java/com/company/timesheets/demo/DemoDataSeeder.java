@@ -43,13 +43,13 @@ import java.util.List;
 
 /**
  * Fills an empty database with demo data on startup: when the only user is admin and there are no projects.
- * Disabled with {@code timesheets.demo-data.enabled=false} (the test profile does so).
+ * Enabled with {@code timesheets.demo-data.enabled=true}, only the dev profile does so (spec 04/01).
  * <p>
  * Everything is saved through DataManager, so the time entry rules apply: entries are created as NEW
  * and then moved through the allowed status transitions.
  */
 @Component
-@ConditionalOnProperty(name = "timesheets.demo-data.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "timesheets.demo-data.enabled", havingValue = "true")
 public class DemoDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);

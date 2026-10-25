@@ -1,0 +1,316 @@
+= 04_deployment_operations / 03 — Reverse proxy и репликация баз
+:toc:
+:status: черновик, ждёт ревью
+
+== Цель
+
+Снаружи стек из спеки 02 виден только через reverse proxy: HTTPS, редирект с
+HTTP, WebSocket для Vaadin Push. Приложение само наружу не публикуется. Прокси
+сразу готов к нескольким узлам приложения (спека 04): липкие сессии по cookie
+и проверка каждого узла. У баз есть горячие реплики на потоковой репликации
+PostgreSQL. При потере основной базы реплику можно повысить вручную, и
+приложение переключится на неё без перенастройки.
+
+== В области
+
+* Сервис `proxy` (HAProxy) в compose: TLS с самоподписанным сертификатом для
+  localhost, редирект HTTP → HTTPS, проксирование Vaadin и Push.
+* Балансировка, готовая к нескольким узлам: узлы находятся по DNS-имени
+  сервиса `app`, липкость по cookie, health-check каждого узла. В этой спеке
+  узел один.
+* Приложение за прокси: правильная схема и адрес клиента, secure-cookie,
+  ссылки в письмах на `https://`.
+* Потоковая физическая репликация для `main-db` и `reports-db` (вопрос 2):
+  реплики `main-db-replica` и `reports-db-replica` в режиме hot standby.
+* Подключение приложения к паре «основная + реплика» с выбором основной.
+* Ручное повышение реплики (failover) и инструкция в README.
+* README: разделы «Прокси» и «Репликация» внутри «Запуск в Docker».
+
+== Вне области
+
+* Несколько узлов приложения, общий кеш, кластерный Quartz, общие файлы —
+  спека 04.
+* Автоматический failover (Patroni, repmgr), виртуальный IP, pgbouncer.
+* Возврат ролей после failover (switchback): только описание шагов, без
+  автоматизации.
+* Чтение из реплики приложением (разделение чтения и записи).
+* Настоящий сертификат (Let's Encrypt, ACME), HSTS.
+* Резервное копирование и PITR: реплика — не бэкап, это отдельная спека.
+
+== Что уже есть
+
+Проверено по репозиторию и образам.
+
+* Стек спеки 02: `app` публикует `${APP_PORT:-8080}:8080`, базы
+  `postgres:17.11` без реплик, init-сервисы генерируют пароли в том
+  `secrets`.
+* *Vaadin Push включён*: `@Push` на `TimesheetsApplication`. Push идёт через
+  WebSocket на `/VAADIN/push` с откатом на long polling. Прокси с коротким
+  таймаутом соединения рвёт его.
+* *Загрузка файлов*: `fileUploadField` в форме клиента, лимит Jmix
+  `jmix.localfs.max-file-size` по умолчанию 100 МБ. У HAProxy лимита на тело
+  запроса нет (в отличие от nginx с его 1 МБ по умолчанию), его не задаю.
+* *Приложение за прокси*: `server.forward-headers-strategy` не задан. Без него
+  Tomcat считает запрос HTTP, а не HTTPS: cookie без `Secure`, абсолютные
+  редиректы на `http://`.
+* *Сессии Vaadin не переносятся между узлами*: состояние UI живёт в памяти
+  узла. При нескольких узлах нужна липкость. В nginx OSS липкости по cookie
+  нет (`ip_hash` ломается за NAT, хеш от `JSESSIONID` не годится для первого
+  запроса без cookie). Поэтому прокси — HAProxy.
+* *HAProxy* `haproxy:3.2-alpine` (проверено на образе 3.2.26): ветка LTS,
+  собран с OpenSSL, работает под uid 99, так что внутри контейнера порты
+  1024+, наружу 80 и 443 через публикацию. В образе есть `wget` для
+  healthcheck.
+* *PostgreSQL 17.11* (проверено на чистом контейнере): `wal_level=replica`,
+  `max_wal_senders=10`, `password_encryption=scram-sha-256` — для основной
+  базы уже достаточно. В `pg_hba.conf` образа репликация разрешена только
+  локально (`host replication all 127.0.0.1/32 trust`), по сети её нет.
+  Строка `host all all all scram-sha-256` к репликации не относится.
+* *Драйвер* `org.postgresql:postgresql:42.7.13` поддерживает несколько хостов в
+  URL и `targetServerType=primary`.
+* *Сертификат*: в образе HAProxy нет `openssl`, в `postgres:17.11` есть
+  (OpenSSL 3.5.7).
+* Порты 80 и 443 на этой машине свободны.
+
+== Прокси
+
+* Образ `haproxy:3.2.25-alpine` (опубликован 03.10.2026). Конфиг —
+  `docker/proxy/haproxy.cfg`, монтируется только для чтения.
+* Наружу: `${PROXY_HTTP_PORT:-80}:8080` и `${PROXY_HTTPS_PORT:-443}:8443`. У
+  `app` порт больше не публикуется.
+
+=== Конфигурация
+
+[source]
+----
+resolvers docker
+    nameserver dns 127.0.0.11:53        # DNS Docker: все экземпляры сервиса app
+    hold valid 10s
+
+frontend http
+    bind :8080
+    monitor-uri /proxy-health           # healthcheck самого прокси
+    http-request redirect location https://%[req.hdr(host),field(1,:)]:${PROXY_HTTPS_PORT}%[capture.req.uri] code 301
+
+frontend https
+    bind :8443 ssl crt /certs/localhost.pem alpn h2,http/1.1
+    http-request deny deny_status 404 if { path_beg /actuator } !{ path /actuator/health }
+    http-request set-header X-Forwarded-Proto https
+    http-request set-header X-Forwarded-Port ${PROXY_HTTPS_PORT}
+    option forwardfor
+    default_backend app
+
+backend app
+    balance roundrobin
+    cookie TS_NODE insert indirect nocache httponly secure
+    option httpchk GET /actuator/health
+    http-check expect status 200
+    timeout tunnel 1h                   # WebSocket Vaadin Push
+    server-template app 3 app:8080 check cookie app resolvers docker init-addr none
+----
+
+Это эскиз: точный синтаксис (редирект при порте 443 без суффикса `:443`,
+`cookie` у `server-template`) сверю по документации HAProxy 3.2 при
+реализации.
+
+* *Узлы*: `server-template` заводит три слота и заполняет их адресами из DNS
+  Docker для имени `app`. Сейчас занят один, при `--scale app=3` (спека 04)
+  — все три, без правки конфига.
+* *Липкость*: HAProxy ставит cookie `TS_NODE` с именем узла. Первый запрос
+  уходит по `roundrobin`, следующие — на тот же узел. `indirect` — cookie не
+  уходит в приложение, `nocache` — ответ с ним не кешируется.
+* *Health-check каждого узла*: `GET /actuator/health` напрямую к узлу. Узел с
+  DOWN выводится из балансировки, его пользователи переходят на другой узел (и
+  входят заново, см. спеку 04).
+* *Actuator снаружи*: только `/actuator/health` (вопрос 1), остальное → 404.
+  Внутри сети compose `info` доступен как раньше.
+* *WebSocket*: HAProxy пропускает `Upgrade` сам, `timeout tunnel 1h` держит
+  Push. Общие таймауты `client`/`server` 1 мин.
+* *Сертификат*: одноразовый `cert-init` на образе `postgres:17.11` (там есть
+  `openssl`) создаёт в томе `proxy-certs` самоподписанный сертификат на 825
+  дней для `localhost` и `127.0.0.1` (SAN). HAProxy нужен один PEM: сертификат
+  и ключ вместе, права для uid 99. Если файл уже есть, не перезаписывается.
+  Приватный ключ не в репозитории и не в образе. Браузер покажет
+  предупреждение — README объясняет, как принять исключение. HSTS не включаю:
+  для `localhost` браузер запомнит его надолго.
+* Healthcheck прокси: `wget -q -O /dev/null http://127.0.0.1:8080/proxy-health`.
+  `proxy` стартует после `app` (healthy) и `cert-init`.
+
+=== Приложение за прокси
+
+В `application-prod.properties`:
+
+[source,properties]
+----
+server.forward-headers-strategy=native
+----
+
+* `native` — `RemoteIpValve` Tomcat. Заголовкам `X-Forwarded-*` он верит
+  только от внутренних адресов (10/8, 172.16/12, 192.168/16, 127/8), сеть
+  compose туда входит. Клиент снаружи прокси подделать их не может.
+* Без прокси (запуск jar по README спеки 01) ничего не меняется: без
+  заголовков valve ничего не делает.
+* В compose `TIMESHEETS_PUBLIC_URL=https://localhost` (при нестандартном
+  `PROXY_HTTPS_PORT` — с портом). Ссылки регистрации и приглашений ведут на
+  HTTPS.
+
+== Репликация
+
+=== Схема
+
+[source]
+----
+main-db ──── WAL stream (slot main_db_replica) ──► main-db-replica     (hot standby)
+reports-db ─ WAL stream (slot reports_db_replica) ► reports-db-replica (hot standby)
+----
+
+* Асинхронная (вопрос 3): основная база не ждёт реплику, падение реплики не
+  останавливает запись. Цена — при потере основной базы могут пропасть
+  последние транзакции, которые не успели уйти на реплику.
+* Слот репликации: основная база хранит WAL, пока реплика его не забрала.
+  Чтобы остановленная реплика не заполнила диск, `max_slot_wal_keep_size=2GB`.
+  Если реплика отстала больше, слот инвалидируется, реплику пересоздают
+  (README).
+
+=== Основная база
+
+Скрипт `docker/postgres/primary-init.sh` в `/docker-entrypoint-initdb.d`
+выполняется один раз, при создании пустого тома:
+
+* роль `replicator` с `REPLICATION LOGIN`, пароль из
+  `/secrets/<db>_replication_password`;
+* физический слот `<db>_replica` (`pg_create_physical_replication_slot`);
+* строка `host replication replicator all scram-sha-256` в `pg_hba.conf`.
+
+`max_slot_wal_keep_size` передаётся командой `postgres -c ...` в compose.
+
+Тома основных баз со старым содержимым скрипт не трогает: он работает только
+на пустом томе. Стек спеки 02 сейчас погашен с `down -v`, так что стартуем с
+пустых томов. README говорит, что для существующего стека нужен `down -v` или
+три команды вручную.
+
+=== Реплика
+
+`docker/postgres/replica-entrypoint.sh`, контейнер под пользователем
+`postgres`:
+
+. если каталог данных пуст: `pg_basebackup -h <primary> -U replicator
+  -S <db>_replica -X stream -R -D "$PGDATA"`, пароль из файла через
+  `PGPASSFILE`. Ключ `-R` пишет `standby.signal` и `primary_conninfo`;
+. затем `exec docker-entrypoint.sh postgres`: стандартный старт образа.
+
+* Healthcheck: `pg_isready` и `select pg_is_in_recovery()` = `t`.
+* Реплика стартует после основной базы (healthy). Приложение от реплики не
+  зависит: стек работает и без неё.
+* Hot standby: на реплике можно читать (`psql`), писать нельзя.
+* Пароль `replicator` — новые файлы `main_db_replication_password` и
+  `reports_db_replication_password` от `secrets-init`. Внутри тома реплики
+  пароль лежит в `postgresql.auto.conf` (так делает `pg_basebackup -R`);
+  наружу том не виден.
+
+=== Подключение приложения
+
+[source,properties]
+----
+MAIN_DB_URL=jdbc:postgresql://main-db:5432,main-db-replica:5432/ts?targetServerType=primary
+REPORTS_DB_URL=jdbc:postgresql://reports-db:5432,reports-db-replica:5432/ts_reports?targetServerType=primary
+----
+
+* Драйвер перебирает хосты и подключается к тому, который не в recovery.
+  Пока жива основная база, все подключения идут к ней. Реплика в режиме
+  standby не подходит и пропускается.
+* Меняется только значение переменных в `compose.yaml`, код и properties не
+  меняются.
+
+=== Failover вручную
+
+. Основная база недоступна (`docker compose stop main-db` в учебном
+  сценарии). Health приложения → DOWN, HAProxy выводит узел из балансировки
+  и отвечает 503.
+. `docker compose exec main-db-replica psql -U ts -c "select pg_promote()"`.
+. Реплика становится основной. Новые подключения Hikari идут к ней, health
+  приложения → UP без перезапуска приложения, HAProxy возвращает узел.
+. Старую основную базу *нельзя* запускать как есть: будет две основные, а
+  драйвер выберет первую по списку, то есть устаревшую. README говорит
+  оставить её остановленной.
+
+Возврат ролей (switchback) — вне области, README перечисляет шаги: удалить
+том старой основной базы, поднять её как реплику новой, сделать обратное
+повышение. Скрипты в compose под такую смену ролей не рассчитаны.
+
+== Файлы
+
+* `docker/proxy/haproxy.cfg`, `docker/proxy/cert-init.sh`.
+* `docker/postgres/primary-init.sh`, `docker/postgres/replica-entrypoint.sh`.
+* `compose.yaml`: сервисы `proxy`, `cert-init`, `main-db-replica`,
+  `reports-db-replica`; `app` без `ports`; новые URL баз; тома
+  `proxy-certs`, `main-db-replica-data`, `reports-db-replica-data`.
+* `docker/secrets-init.sh`: два пароля репликации.
+* `application-prod.properties`: `server.forward-headers-strategy=native`.
+* README.
+
+== Проверка
+
+Java-тестов нет: логика приложения не меняется, `forward-headers-strategy` —
+настройка Tomcat. `gradle clean test` остаётся зелёным.
+
+Стек проверяю сам, как в спеке 02, потом `down -v`:
+
+* `curl -k` через прокси: health, редирект с 80, 404 на `/actuator/info`;
+  `Set-Cookie` сессии с `Secure` и cookie `TS_NODE`;
+* WebSocket: `curl` с `Upgrade: websocket` на `/VAADIN/push` получает 101;
+* тело 5 МБ через прокси не отклоняется прокси (ответ не 413);
+* репликация: строка в основной базе видна на реплике, запись в реплику
+  отклоняется, `pg_stat_replication` показывает `streaming`;
+* failover по шагам выше: health DOWN, 503 от прокси → `pg_promote()` →
+  health UP, новая запись идёт в повышенную реплику.
+
+Вход через браузер по HTTPS — Gate 3, у тебя.
+
+== Кто что делает
+
+* Я: compose, конфиг HAProxy, скрипты баз, сертификат, свойство prod, README,
+  проверка стека.
+* Studio: ничего.
+* Ничего не коммичу.
+
+== Решения ревью
+
+* Прокси — HAProxy, а не nginx и не Caddy: липкость по cookie и
+  обнаружение узлов по DNS нужны для спеки 04.
+
+== Вопросы на ревью
+
+. Через прокси наружу только `/actuator/health`, остальной Actuator — только
+  внутри сети. Или закрыть снаружи весь `/actuator`?
+. Реплики для обеих баз? В базе отчётов лежат результаты закрытия месяца
+  (`BillingRecord`), их не пересчитать заново после изменения списаний.
+  Предлагаю обе.
+. Асинхронная репликация. Синхронная (`synchronous_standby_names`) не
+  теряет транзакции, но при остановке реплики основная база перестаёт
+  принимать запись. Асинхронная?
+. Failover только вручную, через `pg_promote()` и multi-host URL, без
+  автоматики и без switchback. Так?
+
+== Критерии приёмки
+
+. `docker compose up -d --build` с нуля: `proxy`, `app`, обе базы и обе
+  реплики healthy, init-сервисы — код 0. У `app` нет опубликованных портов.
+. `https://localhost/` отдаёт приложение (сертификат самоподписанный),
+  `http://localhost/` → 301 на HTTPS. Вход admin и `ivanov` через HTTPS
+  работает, Push не рвётся.
+. `https://localhost/actuator/health` → UP; `/actuator/info`,
+  `/actuator/env` через прокси → 404.
+. Cookie сессии с флагом `Secure`, есть cookie `TS_NODE`. Ссылка в письме
+  регистрации начинается с `https://localhost`.
+. Картинка клиента 5 МБ загружается через прокси.
+. Новая строка в основной базе через секунду видна на реплике, запись в
+  реплику отклоняется. `pg_stat_replication` на основной: `streaming` для
+  реплики.
+. Остановка реплики не мешает приложению; после её старта она догоняет
+  основную.
+. Failover: остановка `main-db` → health DOWN, прокси 503;
+  `pg_promote()` на реплике → health UP без перезапуска `app`, запись
+  работает.
+. Ключ сертификата и пароли репликации не в репозитории и не в образе.
+. `gradle clean test` зелёный.

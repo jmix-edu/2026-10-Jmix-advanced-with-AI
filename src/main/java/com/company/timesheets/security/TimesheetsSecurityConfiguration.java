@@ -46,4 +46,17 @@ public class TimesheetsSecurityConfiguration {
 
         return http.build();
     }
+
+    // Actuator: health and info without sign-in, every other endpoint refused to everyone (spec 04/01).
+    // Paths, not EndpointRequest: that one lives in spring-boot-security, which Jmix does not use.
+    @Bean
+    @Order(JmixSecurityFilterChainOrder.CUSTOM)
+    SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/actuator", "/actuator/**")
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .anyRequest().denyAll());
+
+        return http.build();
+    }
 }

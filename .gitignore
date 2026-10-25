@@ -29,3 +29,7 @@ vite.generated.ts
 webpack.generated.js
 
 .DS_Store
+
+### Docker stack (spec 04/02) ###
+.env
+secrets/

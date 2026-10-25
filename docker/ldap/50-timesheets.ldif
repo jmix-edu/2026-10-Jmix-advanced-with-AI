@@ -1,0 +1,56 @@
+# Demo directory of the Docker stack (spec 04/02), the same as the ts-openldap server of spec 03/06.
+# No passwords here: ldap-init sets them from the "secrets" volume.
+dn: ou=users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: users
+
+dn: cn=ivanov,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: ivanov
+uid: ivanov
+givenName: Ivan
+sn: Ivanov
+mail: ivanov@example.org
+employeeType: own-time-entries
+employeeType: project-participation
+
+dn: cn=petrova,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: petrova
+uid: petrova
+givenName: Olga
+sn: Petrova
+mail: petrova@example.org
+employeeType: own-time-entries
+employeeType: project-participation
+
+dn: cn=sidorov,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: sidorov
+uid: sidorov
+givenName: Pavel
+sn: Sidorov
+mail: sidorov@example.org
+
+dn: cn=employees,ou=users,dc=example,dc=org
+objectClass: groupOfNames
+cn: employees
+member: cn=ivanov,ou=users,dc=example,dc=org
+member: cn=petrova,ou=users,dc=example,dc=org
+
+dn: cn=accounting,ou=users,dc=example,dc=org
+objectClass: groupOfNames
+cn: accounting
+member: cn=petrova,ou=users,dc=example,dc=org
+
+dn: cn=admins,ou=users,dc=example,dc=org
+objectClass: groupOfNames
+cn: admins
+member: cn=sidorov,ou=users,dc=example,dc=org
+
+dn: cn=division,ou=users,dc=example,dc=org
+objectClass: groupOfNames
+cn: division
+member: cn=ivanov,ou=users,dc=example,dc=org
+member: cn=petrova,ou=users,dc=example,dc=org
+member: cn=sidorov,ou=users,dc=example,dc=org

@@ -1,0 +1,222 @@
+= 04_deployment_operations / 04 — Кластер приложения
+:toc:
+:status: черновик, ждёт ревью
+
+== Цель
+
+В стеке из спек 02–03 работает несколько узлов приложения за HAProxy. Узлы
+делят кеши Jmix и события, задания Quartz выполняются один раз на кластер,
+файлы клиентов общие. Пользователь закреплён за узлом; если узел падает, его
+пользователи переходят на другой и входят заново.
+
+== В области
+
+* Embedded Hazelcast в каждом узле: кластерные события Jmix, координация кеша
+  EclipseLink, Spring Cache (JCache) — блокировки, кеши ролей, кеш заданий
+  Quartz.
+* Quartz в кластерном режиме.
+* Общий том файлов клиентов для всех узлов.
+* Ключ remember-me из Vault, одинаковый на всех узлах.
+* `AdminPasswordInitializer`, устойчивый к одновременному первому старту.
+* Несколько узлов в compose (`deploy.replicas`, `--scale app=N`).
+* README: раздел «Кластер».
+
+== Вне области
+
+* Репликация сессий Vaadin между узлами (только Vaadin Kubernetes Kit,
+  коммерческий).
+* Kubernetes, несколько Docker-хостов, сетевое хранилище файлов (NFS, S3 —
+  `jmix-awsfs`).
+* Отдельный кластер Hazelcast или Redis вне узлов приложения.
+* Безопасность кластера Hazelcast (TLS, аутентификация участников — только в
+  Enterprise): кластер живёт во внутренней сети compose.
+* Rolling update без простоя.
+
+== Что уже есть
+
+Проверено по исходникам Jmix 3.0.2 и Spring Boot 4.0.8.
+
+* *Сессии Vaadin* живут в памяти узла, при переходе на другой узел состояние UI
+  теряется. HAProxy (спека 03) закрепляет пользователя за узлом cookie
+  `TS_NODE` и выводит из балансировки узел с DOWN.
+* *Кластерные события Jmix*. `ClusterApplicationEventPublisher` шлёт события
+  через `ClusterApplicationEventChannelSupplier`. По умолчанию канал локальный
+  (`LocalApplicationEventChannelSupplier`). Если на classpath есть Hazelcast
+  и один `HazelcastInstance`, `ClusterApplicationEventChannelAutoConfiguration`
+  подставляет канал на Hazelcast. Через него ходят, например, UI-события
+  пользователей (`UiEventPublisher.UiUserEvent`).
+* *Кеш EclipseLink*. `JmixEclipseLinkChannelAutoConfiguration` по тому же
+  условию переключает координацию кеша запросов с no-op на Hazelcast.
+* *Spring Cache* у Jmix: пессимистические блокировки (`jmix-locks-cache`,
+  `LockManagerImpl`), роли (`resource-roles-cache`, `row-level-roles-cache`),
+  кеш запросов (`jmix-eclipselink-query-cache`, создаётся через
+  `JCacheManagerCustomizer`), выполняемые задания Quartz
+  (`jmix-quartz-running-jobs-cache`). На classpath есть `javax.cache:cache-api`,
+  реализации JCache нет, так что сейчас все кеши локальные для узла.
+  Блокировка, взятая на одном узле, на другом не видна.
+* *Remember-me токены* в базе: `jdbcRememberMeRepository` из
+  `jmix-security-data`, общие для узлов. Ключ —
+  `jmix.core.rememberme.key`, по умолчанию захардкожен в Jmix
+  (`Z9w8F82fGKmJHE7H`) и одинаков во всех Jmix-приложениях.
+* *Quartz*: Jmix включает JDBC-хранилище (`spring.quartz.job-store-type=jdbc`),
+  `isClustered` не задан. Без него каждый узел выполняет задания сам:
+  очистка регистраций, отправка почты, снятие истёкших блокировок.
+* *Файлы клиентов*: `jmix-localfs`, каталог `/app/files` на томе `app-files`
+  (спека 02).
+* *`AdminPasswordInitializer`* (спека 01) читает admin, проверяет пароль,
+  сохраняет. У `User` есть `version`: при одновременном первом старте двух
+  узлов второй получит optimistic lock и не стартует.
+* *Liquibase* при одновременном старте разруливает сам
+  (`DATABASECHANGELOGLOCK`).
+* *Лимит сессий* (`jmix.core.session.maximum-sessions-per-user`) и
+  принудительное завершение сессий пользователя работают через реестр сессий
+  в памяти узла.
+* Spring Boot 4.0.8: модуль `spring-boot-hazelcast`, Hazelcast 5.5.0 в BOM.
+
+== Hazelcast
+
+* Зависимости: `org.springframework.boot:spring-boot-hazelcast`,
+  `com.hazelcast:hazelcast` (версия из BOM Boot).
+* Конфиг `hazelcast-cluster.yaml` в ресурсах:
+** `cluster-name: timesheets`;
+** порт 5701, только во внутренней сети compose;
+** поиск участников: multicast в сети compose или DNS-поиск по имени сервиса
+   `app` (вопрос 2). Проверю оба при реализации, выберу рабочий;
+** карты кешей без вытеснения (`jmix-locks-cache` нельзя терять).
+* *Включается только в кластере.* Без конфига Boot не создаёт
+  `HazelcastInstance`, Jmix остаётся на локальных каналах. Но JCache сам
+  поднимет участника Hazelcast с настройками по умолчанию, если найдёт
+  провайдера на classpath, и в dev узлы на одной сети нашли бы друг друга. Поэтому:
+** общий файл: `spring.cache.type=simple` — как сейчас по факту;
+** compose: `SPRING_HAZELCAST_CONFIG=classpath:hazelcast-cluster.yaml` и
+   `SPRING_CACHE_TYPE=jcache` с провайдером Hazelcast
+   (`spring.cache.jcache.provider`). Точное сочетание свойств Boot 4 для JCache
+   поверх уже созданного `HazelcastInstance` сверю при реализации.
+* Тесты и dev Hazelcast не поднимают.
+
+== Quartz
+
+В `application-prod.properties` (кластерный режим работает и на одном
+узле):
+
+[source,properties]
+----
+spring.quartz.properties.org.quartz.jobStore.isClustered=true
+spring.quartz.properties.org.quartz.scheduler.instanceId=AUTO
+spring.quartz.properties.org.quartz.jobStore.clusterCheckinInterval=15000
+----
+
+Узлы делят задания через блокировки в `QRTZ_LOCKS`; каждое срабатывание
+триггера выполняет один узел. Упавший узел другие замечают через
+`clusterCheckinInterval` и забирают его задания.
+
+== Сессии и узлы
+
+* *Липкость* — HAProxy, спека 03. Общих сессий нет (вопрос 3).
+* *Падение узла*: HAProxy убирает его из балансировки по health-check. Его
+  пользователи на следующем запросе попадают на другой узел, Vaadin
+  показывает «сессия истекла», после перезагрузки — экран входа. С
+  «Запомнить меня» вход происходит сам: токены в базе.
+* *Ключ remember-me* — в Vault (`jmix.core.rememberme.key`), генерирует
+  `secrets-init`. Одинаковый на всех узлах и не захардкожен в Jmix.
+* *Ограничения, которые принимаю*: лимит сессий на пользователя считается на
+  узле; завершение сессий пользователя из UI затрагивает только тот узел, где
+  выполнено. README перечисляет.
+
+== Файлы клиентов
+
+Том `app-files` монтируется во все экземпляры `app` (на одном Docker-хосте
+именованный том можно делить). Для нескольких хостов нужно сетевое хранилище
+или `jmix-awsfs` — вне области.
+
+== Первый старт нескольких узлов
+
+* Liquibase: один узел мигрирует, остальные ждут блокировку.
+* `AdminPasswordInitializer`: если сохранение падает на optimistic lock,
+  перечитывает admin. Пароль уже не `admin` — значит, его поставил другой
+  узел, старт продолжается. Иначе ошибка как раньше.
+* Задания Quartz с `overwriteExistingJobs=true` записывают все узлы, кластерная
+  блокировка Quartz это упорядочивает.
+
+== Compose
+
+* `app`: `deploy.replicas: ${APP_REPLICAS:-2}` (вопрос 5). `docker compose up -d
+  --scale app=3` меняет число без правки файла.
+* У `app` нет `container_name` и портов. HAProxy находит экземпляры по DNS
+  (спека 03, `server-template app 3`). Число слотов — 3; при большем числе
+  узлов — правка одной цифры в `haproxy.cfg`.
+* Переменные: `SPRING_HAZELCAST_CONFIG`, `SPRING_CACHE_TYPE`, провайдер JCache.
+* Healthcheck — как в спеке 02, у каждого экземпляра свой.
+
+== Тесты
+
+* `AdminPasswordInitializerTest`: новый случай — между чтением и записью
+  admin пароль меняет «другой узел» (сохранение версии в тесте), инициализатор
+  не падает и не перезаписывает чужой пароль.
+* Hazelcast, Quartz и HAProxy в Java-тестах не проверяю: это поведение
+  нескольких процессов. Проверка — на живом стеке.
+
+== Проверка стека
+
+Сам, как в спеках 02–03, потом `down -v`:
+
+* `up -d` с двумя узлами: оба healthy, в логах Hazelcast `Members {size:2}`,
+  Liquibase отработал один раз, admin получил пароль один раз, второй узел
+  стартовал без ошибок.
+* `--scale app=3`: третий узел вошёл в кластер (`size:3`), HAProxy видит три
+  сервера.
+* Липкость: `curl` с cookie `TS_NODE` попадает на один узел, без неё —
+  по очереди на разные.
+* Quartz: на время проверки `TIMESHEETS_REGISTRATION_CLEANUP_CRON` раз в
+  минуту; за 5 минут задание выполнилось 5 раз на весь кластер, а не 5 × N.
+  `QRTZ_SCHEDULER_STATE` — N записей.
+* Кеш: запись в кеш блокировок на одном узле видна на другом — через JMX
+  (`jmix-jmxconsole`) или Hazelcast в логах; точный способ выберу при
+  реализации.
+* Остановка узла: HAProxy убирает его, запросы с его cookie уходят на
+  оставшийся узел, health через прокси — UP.
+* Файл, загруженный через один узел, читается с другого.
+
+Gate 3 у тебя: два браузера (или обычное и приватное окно) на разных узлах.
+Блокировка проекта, открытого на редактирование в одном, видна в другом.
+Остановка узла одного пользователя — переход на экран входа, с
+«Запомнить меня» — без него.
+
+== Кто что делает
+
+* Я: зависимости и конфиг Hazelcast, свойства Quartz и кеша,
+  `AdminPasswordInitializer`, ключ remember-me в `secrets-init` и
+  `vault-init`, compose, README, тест, проверка стека.
+* Studio: ничего.
+* Ничего не коммичу.
+
+== Вопросы на ревью
+
+. Hazelcast embedded в узлах — то, что Jmix подключает сам. Альтернатива —
+  Redis: Spring Cache на Redis и свой канал событий на Redis pub/sub, без
+  координации кеша EclipseLink из коробки, плюс отдельный сервис. Hazelcast?
+. Поиск участников: multicast в сети compose или DNS-поиск по имени `app`?
+  Предлагаю проверить оба и оставить тот, что работает без хаков.
+. Сессии только липкие: при падении узла его пользователи входят заново
+  (или автоматически с «Запомнить меня»). Принимаем?
+. Файлы — общий именованный том на одном хосте, S3 потом. Так?
+. По умолчанию два узла (`APP_REPLICAS=2`), три — через `--scale`. Или сразу
+  три?
+
+== Критерии приёмки
+
+. `docker compose up -d --build` с нуля: два узла `app` healthy, Hazelcast
+  `size:2`, оба узла за HAProxy.
+. Первый одновременный старт: оба узла стартуют, admin получает пароль
+  из Vault один раз.
+. `--scale app=3`: третий узел в кластере и в балансировке без правки
+  файлов.
+. Пользователь с cookie `TS_NODE` остаётся на своём узле. После остановки узла
+  его следующий запрос уходит на живой, health через прокси — UP.
+. Задание Quartz выполняется один раз на срабатывание на весь кластер.
+. Пессимистическая блокировка, взятая на одном узле, видна на другом.
+. Картинка клиента, загруженная через один узел, отображается с другого.
+. Ключ remember-me берётся из Vault, `Z9w8F82fGKmJHE7H` не используется.
+. Без кластерного конфига (dev, тесты) Hazelcast не стартует.
+. `gradle clean test` зелёный, включая новый случай
+  `AdminPasswordInitializerTest`.

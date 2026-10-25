@@ -32,7 +32,7 @@
                         dataLoader="tasksDl" property="name"
                         operation="CONTAINS"
                         labelVisible="false"
-                        width="100%" maxWidth="30em">
+                        width="100%" maxWidth="30em" autoApply="true">
             <textField id="filterField"
                        placeholder="Start typing..."
                        clearButtonVisible="true">

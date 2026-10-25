@@ -1,0 +1,386 @@
+= 04_deployment_operations / 01 — Профиль prod
+:toc:
+:status: реализовано, ждёт Gate 3
+
+== Цель
+
+Приложение запускается в проде одной командой с профилем `prod`. В проде нет
+демо-данных и dev-настроек, фронтенд собран в production-режиме, пароли баз
+берутся из Vault, admin не входит с паролем `admin`, а наружу открыты только
+health и info из Actuator. В dev всё работает как сейчас.
+
+== В области
+
+* Раскладка настроек по профилям: общие, `dev`, `prod`.
+* Production-сборка фронтенда Vaadin и исключение `vaadin-dev` из сборки.
+* Пароли основной базы и базы отчётов из Vault (KV). Dev-сервер Vault в Docker
+  для проверки профиля prod локально.
+* Пароль admin при первом развёртывании.
+* Actuator: health с проверкой обеих баз и info без входа, остальное закрыто.
+* README, раздел «Запуск в проде».
+
+== Вне области
+
+* Docker-образ приложения и compose: следующая спека.
+* Кластер, несколько экземпляров, общие сессии.
+* Ротация секретов, динамические креды баз из Vault (database secrets engine),
+  обновление настроек без перезапуска.
+* TLS, обратный прокси, отдельный порт management. Это сетевой уровень,
+  он относится к спеке про Docker.
+
+== Что уже есть
+
+Проверено по репозиторию и исходникам Jmix 3.0.2, Spring Boot 4.0.8 и
+flow-gradle-plugin 25.1.14.
+
+* *Профилей нет.* Всё лежит в `application.properties`, тесты добавляют
+  `application-test.properties` через `@ActiveProfiles("test")`.
+* *Секреты и dev-значения в репозитории:*
+** `reports.datasource.username=root`, `reports.datasource.password=root`;
+** `jmix.ldap.manager-password=admin` (демо-LDAP);
+** `ui.login.defaultUsername=admin`, `ui.login.defaultPassword=admin`.
++
+Пароль основной базы уже берётся из окружения:
+`main.datasource.username=${DB_USERNAME}`, `main.datasource.password=${DB_PASSWORD}`.
+* *Dev-настройки:* `logging.level.io.jmix.core.AccessLogger=debug`,
+  `spring.output.ansi.enabled=always`, `vaadin.launch-browser`,
+  `jmix.core.session.maximum-sessions-per-user=100`, адреса `localhost`
+  (базы, FakeSMTP, LDAP, `timesheets.public-url`).
+* *Сидер* `DemoDataSeeder` включён по умолчанию:
+  `@ConditionalOnProperty(name = "timesheets.demo-data.enabled", havingValue = "true", matchIfMissing = true)`.
+  На пустой базе он создаёт alice…erik с паролем `password`. Выключается
+  только явным `false`, как в тестах.
+* *Фронтенд.* В `build.gradle` стоят `vaadin { productionMode = false }` и
+  `implementation 'com.vaadin:vaadin-dev'`. Плагин Vaadin читает
+  `-Pvaadin.productionMode=true`, и это значение перекрывает блок `vaadin {}`
+  (`overrideWithSystemPropertyFlag`). Сам плагин `vaadin-dev` не исключает:
+  явная зависимость попадёт и в production-jar.
+* *Две базы:* бины `dataSource` (`main.datasource`, `@Primary`) и
+  `reportsDataSource` (`reports.datasource`, `ReportsStoreConfiguration`).
+* *Actuator* не подключён.
+
+=== Откуда берётся admin/admin
+
+. Changelog `010-init-user.xml`, changeSet 3: на любой новой базе, в том
+  числе в проде, создаётся `admin` с паролем `{noop}admin`. ChangeSet 4
+  назначает ему `system-full-access`. Это шаблон Jmix, файл помечен
+  «DO NOT REMOVE».
+. `ui.login.defaultUsername/defaultPassword=admin` подставляют логин и пароль в
+  форму входа (`LoginView.initDefaultCredentials`). При `defaultPassword=admin`
+  показывается предупреждение (`showWarningIfDefaultCredentials`).
+. `admin` есть в `jmix.ldap.standard-authentication-users`, поэтому он входит
+  паролем из базы, даже если в LDAP найдётся одноимённый пользователь.
+. README в разделе «Running» называет admin/admin учёткой по умолчанию.
+
+Убрать пункт 2 из прода просто. Пункт 1 сработает на каждой новой базе.
+
+=== Actuator и безопасность Jmix
+
+* В Jmix 3.0.2 нет своей настройки для Actuator: в `jmix-core`,
+  `jmix-security`, `jmix-security-flowui` и стартерах нет ни
+  `EndpointRequest`, ни `management.*`.
+* Без своей цепочки фильтров запрос `/actuator/**` попадает в цепочку
+  Flow UI (`FlowuiVaadinWebSecurity`, порядок
+  `JmixSecurityFilterChainOrder.FLOWUI`). Она требует входа и отправляет
+  анонима на страницу входа. Health для балансировщика и мониторинга при этом
+  недоступен.
+* Jmix предлагает расширение: свой `SecurityFilterChain` с
+  `@Order(JmixSecurityFilterChainOrder.CUSTOM)`, он раньше всех цепочек Jmix.
+  Так уже сделан `/public/**` в `TimesheetsSecurityConfiguration`.
+* Health обеих баз Spring Boot даёт сам: `DataSourceHealthContributorAutoConfiguration`
+  (`spring-boot-jdbc`) собирает компонент `db` из всех бинов `DataSource`, то
+  есть `dataSource` и `reportsDataSource`.
+
+== Профили
+
+[cols="1,3",options="header"]
+|===
+| Файл | Что в нём
+| `application.properties` | Общее, без секретов и без адресов localhost, где их надо менять в проде. `spring.profiles.default=dev`. `spring.application.name=timesheets`. `spring.cloud.vault.enabled=false`.
+| `application-dev.properties` | Всё, что сейчас dev: localhost-адреса баз, FakeSMTP, LDAP, `public-url`; `reports` root/root; `jmix.ldap.manager-password=admin`; `ui.login.default*`; `timesheets.demo-data.enabled=true`; уровни логов, ansi, `launch-browser`, `maximum-sessions-per-user`.
+| `application-prod.properties` | Адреса и логины из переменных окружения, пароли из Vault, `management.*`, проверка пароля admin. Ни одного значения-секрета.
+| `application-test.properties` | Как сейчас. Тесты не используют `dev` и `prod`.
+|===
+
+* `spring.profiles.default=dev`: `./gradlew bootRun` и конфигурация запуска
+  Studio без указания профиля работают как сейчас (вопрос 1).
+* Сидер выключен по умолчанию: `matchIfMissing = false`, включается строкой в
+  `application-dev.properties`. Если в проде забыть профиль или опечататься в
+  нём, демо-пользователи с паролем `password` не появятся (вопрос 2).
+* В prod уровни логов `info` и `spring.output.ansi.enabled=never`. Остальные
+  dev-значения в prod не попадают, потому что их нет в общем файле.
+
+== Production-сборка фронтенда
+
+* Команда: `./gradlew -Pvaadin.productionMode=true bootJar`. Плагин собирает
+  бандл (`vaadinBuildFrontend`), jar запускается в production-режиме.
+* `vaadin-dev` подключается только в dev-сборке:
++
+[source,groovy]
+----
+if (!vaadin.effective.productionMode.get()) {
+    implementation 'com.vaadin:vaadin-dev'
+}
+----
++
+Условие стоит после блока `vaadin {}`, иначе прочитается значение до
+настройки. Для `bootRun` и тестов ничего не меняется.
+* `springBoot { buildInfo() }`: версия и время сборки для `/actuator/info`.
+
+== Секреты из Vault
+
+* Зависимость `org.springframework.cloud:spring-cloud-starter-vault-config`
+  через BOM `spring-cloud-dependencies` линии 2025.1.x (Spring Boot 4.0).
+  Точную версию сверю по Maven Central при реализации.
+* В `application-prod.properties`:
++
+[source,properties]
+----
+spring.config.import=vault://
+spring.cloud.vault.enabled=true
+spring.cloud.vault.uri=${VAULT_URI}
+spring.cloud.vault.authentication=TOKEN
+spring.cloud.vault.token=${VAULT_TOKEN}
+spring.cloud.vault.kv.enabled=true
+spring.cloud.vault.kv.backend=secret
+----
++
+Без `optional:`: если Vault недоступен, приложение не стартует.
+* Секреты лежат в KV v2 по пути `secret/timesheets`, контекст по
+  `spring.application.name`. Ключи совпадают с именами свойств: импорт через
+  `spring.config.import` перекрывает файл, из которого он сделан.
++
+[cols="2,3",options="header"]
+|===
+| Ключ | Зачем
+| `main.datasource.password` | основная база
+| `reports.datasource.password` | база отчётов
+| `timesheets.admin.initial-password` | пароль admin при первом запуске
+| `jmix.ldap.manager-password` | bind-учётка LDAP (вопрос 5)
+| `spring.mail.password` | SMTP с авторизацией, если есть (вопрос 5)
+|===
+* Аутентификация в Vault — токен из переменной `VAULT_TOKEN` (вопрос 4).
+* Тесты и dev Vault не трогают: `spring.cloud.vault.enabled=false` в общем
+  файле, импорт есть только в prod.
+* *Dev-сервер Vault* для проверки профиля prod локально, описывается в README:
++
+[source,bash]
+----
+docker run -d --name ts-vault -p 8200:8200 \
+  -e VAULT_DEV_ROOT_TOKEN_ID=dev-root hashicorp/vault:<версия>
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=dev-root ts-vault \
+  vault kv put secret/timesheets \
+    main.datasource.password=... reports.datasource.password=... \
+    timesheets.admin.initial-password=...
+----
++
+Dev-режим Vault хранит данные в памяти: после перезапуска контейнера секреты
+нужно положить заново. Версию образа закреплю при реализации. Порт 8200
+сейчас свободен.
+
+== Пароль admin при первом развёртывании
+
+Предлагаю `AdminPasswordInitializer` (пакет `security`), включённый
+свойством `timesheets.admin.require-initial-password=true`. Свойство стоит
+только в `application-prod.properties`.
+
+* Срабатывает после Liquibase и до того, как веб-сервер начнёт принимать
+  запросы (`SmartInitializingSingleton`, а не `ApplicationReadyEvent`). Работает
+  под системным пользователем (`SystemAuthenticator`), потому что
+  пользователя в этот момент нет.
+* Если у `admin` пароль `admin` (проверка через `PasswordEncoder.matches`,
+  то есть и `{noop}admin`, и любой хеш от `admin`):
+** задан `timesheets.admin.initial-password` → пароль кодируется и
+   сохраняется, в лог пишется «admin password set from initial-password»
+   без самого пароля;
+** не задан → старт прерывается с сообщением, какой ключ положить в Vault.
+* Если пароль уже другой, ничего не меняется. Ключ из Vault после первого
+  запуска можно удалить.
+* Минимальная длина `initial-password` — 12 символов, иначе старт
+  прерывается.
+* `010-init-user.xml` не меняется: изменение применённого changeSet ломает
+  контрольные суммы на уже развёрнутых базах.
+
+Отвергнутые варианты:
+
+* *Админ меняет пароль сам после первого входа.* До этого момента в проде
+  работает admin/admin.
+* *Свой changeSet с хешем из параметра Liquibase.* Хеш придётся передавать
+  снаружи, и changeSet 3 всё равно создаст admin/admin раньше.
+
+== Actuator
+
+* Зависимость `org.springframework.boot:spring-boot-starter-actuator`.
+* Наружу по HTTP только `health` и `info`, в общем файле, то есть и в dev:
++
+[source,properties]
+----
+management.endpoints.web.exposure.include=health,info
+management.endpoints.jmx.exposure.exclude=*
+management.endpoint.health.show-components=always
+management.endpoint.health.show-details=never
+management.health.mail.enabled=false
+management.health.ldap.enabled=false
+----
++
+Аноним видит статус и компоненты (`db` → `dataSource`, `reportsDataSource`,
+`diskSpace`, `ping`), но не детали: тип базы, запрос проверки, место на
+диске. Почта и LDAP не роняют health приложения (вопрос 3). Health Vault в prod
+выключается так же (`management.health.vault.enabled=false`): секреты
+читаются один раз при старте.
+* `info`: `management.info.build.enabled=true`, остальные источники info
+  (env, git, java, os) выключены.
+* Цепочка безопасности — новый бин в `TimesheetsSecurityConfiguration`:
++
+[source,java]
+----
+@Bean
+@Order(JmixSecurityFilterChainOrder.CUSTOM)
+SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+    http.securityMatcher(EndpointRequest.toAnyEndpoint())
+            .authorizeHttpRequests(authorize -> authorize
+                    .requestMatchers(EndpointRequest.to(HealthEndpoint.class, InfoEndpoint.class)).permitAll()
+                    .anyRequest().denyAll());
+    return http.build();
+}
+----
++
+Пакет `EndpointRequest` в Spring Boot 4 (модуль `spring-boot-security`) сверю
+при реализации. `denyAll` — вторая линия защиты: даже если кто-то откроет
+эндпоинт свойством, без отдельного решения его не будет видно ни анониму, ни
+admin.
+
+== README: «Запуск в проде»
+
+* Сборка: `./gradlew -Pvaadin.productionMode=true bootJar`, результат
+  `build/libs/timesheets-0.0.1-SNAPSHOT.jar`.
+* Запуск: `java -jar build/libs/timesheets-0.0.1-SNAPSHOT.jar` с
+  `SPRING_PROFILES_ACTIVE=prod`.
+* Переменные окружения:
++
+[cols="1,2",options="header"]
+|===
+| Переменная | Значение
+| `SPRING_PROFILES_ACTIVE` | `prod`
+| `MAIN_DB_URL`, `MAIN_DB_USERNAME` | основная база
+| `REPORTS_DB_URL`, `REPORTS_DB_USERNAME` | база отчётов
+| `VAULT_URI`, `VAULT_TOKEN` | Vault
+| `TIMESHEETS_PUBLIC_URL` | адрес для ссылок в письмах
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM` | SMTP
+| `LDAP_URLS`, `LDAP_BASE_DN`, `LDAP_MANAGER_DN` | LDAP
+|===
+* Какие ключи положить в Vault и что будет без `initial-password`.
+* Проверка: `curl /actuator/health` и `curl /actuator/info`.
+* Раздел «Running» уточняется: admin/admin только в dev.
+
+== Тесты
+
+Пишу только для правил, которые руками проверять долго или опасно:
+
+* `AdminPasswordInitializerTest`:
+** пароль `admin` и задан `initial-password` → пароль заменён и
+   проверяется через `PasswordEncoder`;
+** пароль `admin`, `initial-password` не задан или короче 12 символов →
+   исключение;
+** пароль уже другой → не меняется, даже если `initial-password` задан.
+* `ActuatorSecurityTest` (`webEnvironment = RANDOM_PORT`, запросы без входа):
+** `/actuator/health` → 200, `UP`, в `db` есть `dataSource` и
+   `reportsDataSource`, деталей нет;
+** `/actuator/info` → 200;
+** `/actuator/env`, `/actuator/beans`, `/actuator/configprops` → не 200.
+
+Старт с профилем prod и Vault — ручная проверка (Gate 3): живой Vault в тестах
+не поднимаю.
+
+== Кто что делает
+
+* Я: раскладка properties по профилям, `build.gradle` (vaadin-dev, Actuator,
+  Spring Cloud Vault, buildInfo), сидер, `AdminPasswordInitializer`, цепочка
+  Actuator, README, тесты.
+* Studio (ведущий): ничего обязательного. Сущностей, вью и changelog нет. Если
+  удобнее добавлять зависимости через Studio, это зависимости из блока
+  `build.gradle` выше.
+* Ничего не коммичу.
+
+== Решения ревью
+
+. Dev-пароли тоже вынесены в переменные окружения: `DB_USERNAME`,
+  `DB_PASSWORD`, `REPORTS_DB_PASSWORD` (`REPORTS_DB_USERNAME`, по умолчанию
+  `root`), `LDAP_MANAGER_PASSWORD`, `UI_LOGIN_DEFAULT_PASSWORD` (необязательно).
+. Сидер выключен по умолчанию, включается в dev.
+. Health: обе базы, диск, ping. Почта, LDAP и Vault в статус не входят.
+. Vault: токен из `VAULT_TOKEN`. AppRole — в спеке про Docker.
+. Пароли LDAP и SMTP тоже из Vault.
+. Пароль admin задаёт `AdminPasswordInitializer`. Без ключа prod не стартует.
+
+== Отличия реализации от черновика
+
+* *Actuator-цепочка сопоставляет пути* (`/actuator`, `/actuator/**`,
+  разрешены `/actuator/health`, `/actuator/health/**`, `/actuator/info`), а не
+  `EndpointRequest`. `EndpointRequest` в Spring Boot 4 лежит в модуле
+  `spring-boot-security`, которого в проекте нет: Jmix подключает Spring
+  Security без автоконфигурации Boot. Тянуть модуль ради матчера — значит
+  включить всю security-автоконфигурацию Boot. Следствие: если поменять
+  `management.endpoints.web.base-path`, цепочку нужно поправить.
+* *`buildInfo()` не добавлен*: задачу `bootBuildInfo` уже регистрирует плагин
+  Jmix.
+* *Spring Cloud 2025.1.3* (spring-cloud-vault 5.0.2). Версии 2025.1.4 и 5.0.3
+  вышли за день до реализации, их не брал.
+* *Образ Vault* `hashicorp/vault:2.1.2`.
+* *Тестовый профиль* получил значения, которые раньше брал из общего файла:
+  почта, `public-url`, `base-dn`, `manager-dn`, фиктивный `manager-password`,
+  `maximum-sessions-per-user`.
+* Минимальная длина и запрет `admin` для `initial-password` проверяются при
+  старте.
+* *Quartz на Postgres.* Живой запуск prod на свежей базе упал на
+  `JobPersistenceException: Bad value for type long`: Jmix включает JDBC-хранилище
+  Quartz (`spring.quartz.job-store-type=jdbc`), но делегат не задаёт, а
+  стандартный не читает BYTEA в Postgres. В `dev` и `prod` добавлен
+  `org.quartz.jobStore.driverDelegateClass=PostgreSQLDelegate`. Тесты на HSQLDB
+  остаются со стандартным делегатом.
+* *Health без Spring Cloud.* Вместе с Vault пришли индикаторы
+  `discoveryComposite` (UNKNOWN, с описанием) и `refreshScope`. Оба выключены в
+  общем файле, тест это проверяет.
+
+== Проверка запуска prod
+
+23.10.2026, jar из `-Pvaadin.productionMode=true bootJar`, `ts-vault`
+(`hashicorp/vault:2.1.2`), пустые базы в одноразовом контейнере Postgres:
+
+. Без `timesheets.admin.initial-password`: старт прерван с сообщением про
+  ключ. Liquibase к этому моменту уже отработал.
+. С ключом: старт за 20 с, «Vaadin is running in production mode», «admin
+  password set from timesheets.admin.initial-password». В базе только admin
+  с bcrypt-хешем, пароль из Vault подходит, `admin` — нет. Проектов нет.
+. `/actuator/health` → 200, `db`: `dataSource` UP, `reportsDataSource` UP, без
+  деталей. `/actuator/info` → версия и время сборки. `/actuator`,
+  `/actuator/env`, `beans`, `configprops`, `heapdump` → 403.
+. База отчётов закрыта для подключений → `reportsDataSource` DOWN, 503. После
+  открытия → 200.
+. Ключ удалён из Vault, перезапуск: старт без ошибок, хеш пароля admin не
+  изменился.
+. Vault недоступен → старт прерван.
+
+
+== Критерии приёмки
+
+. `./gradlew bootRun` без параметров работает как сейчас, если заданы
+  переменные из README: демо-данные, localhost-адреса, admin/admin.
+. `./gradlew -Pvaadin.productionMode=true bootJar` собирает jar. В нём нет
+  `vaadin-dev-server`, при старте в логе production-режим Vaadin.
+. Jar с `SPRING_PROFILES_ACTIVE=prod`, переменными из README и Vault
+  стартует на пустых базах: Liquibase отрабатывает, демо-данных нет.
+  `admin` входит паролем из `initial-password`, с `admin` не входит, форма
+  входа пустая.
+. Тот же запуск без `timesheets.admin.initial-password` в Vault не стартует,
+  в логе сказано, какой ключ нужен. Без Vault или с неверным токеном тоже не
+  стартует.
+. `grep -rn "password" src/main/resources/application*.properties`: в общем и
+  prod-файлах ни одного значения-пароля.
+. Без входа: `/actuator/health` → `UP` с компонентами обеих баз и без
+  деталей, `/actuator/info` → версия. `/actuator/env` и прочие закрыты, в том
+  числе для admin.
+. Остановка базы отчётов → `/actuator/health` показывает `DOWN` у
+  `reportsDataSource`.
+. `gradle clean test` зелёный, включая `AdminPasswordInitializerTest` и
+  `ActuatorSecurityTest`.

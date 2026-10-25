@@ -1,0 +1,11 @@
+# Only what the production build needs (spec 04/02)
+*
+!gradlew
+!gradle/
+!build.gradle
+!settings.gradle
+!gradle.properties
+!src/main/
+!docker/app-entrypoint.sh
+src/main/frontend/generated/
+src/main/bundles/
