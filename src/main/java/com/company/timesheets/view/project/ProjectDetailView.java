@@ -185,7 +185,7 @@ public class ProjectDetailView extends StandardDetailView<Project> {
     }
 
 
-    //todo check how to hide empty space at the position 0
+    //todo проверить, как скрыть пустое место в позиции 0
     @Supply(to = "clientsComboBox", subject = "renderer")
     private Renderer<Client> clientsComboBoxRenderer() {
         return new ComponentRenderer<>(client -> {

@@ -1,4 +1,4 @@
-/* Predefined styles for the MainView */
+/* Готовые стили для MainView */
 
 .jmix-main-view-header {
   box-sizing: border-box;
@@ -65,7 +65,7 @@
   flex-grow: 1;
 }
 
-/* User Menu */
+/* Меню пользователя */
 
 .jmix-main-view-user-menu {
     margin-inline-start: auto;
@@ -150,7 +150,7 @@
     display: none;
 }
 
-/* Initial Layout */
+/* Начальная раскладка */
 
 .jmix-initial-layout {
     --title-size: var(--lumo-font-size-xxxl);
@@ -214,13 +214,13 @@
     }
 }
 
-/* MenuFilterField component */
+/* Компонент MenuFilterField */
 
 .jmix-main-view-navigation > .jmix-menu-filter-field {
     margin: var(--lumo-space-s) var(--lumo-space-m);
 }
 
-/* Search add-on */
+/* Дополнение Search */
 
 .jmix-main-view-navigation > .jmix-search-field {
     display: flex;

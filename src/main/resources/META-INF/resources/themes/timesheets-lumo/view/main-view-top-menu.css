@@ -1,4 +1,4 @@
-/* Predefined styles for the MainView with a HorizontalMenu */
+/* Готовые стили для MainView с HorizontalMenu */
 
 vaadin-app-layout.jmix-main-view-top-menu-app-layout::part(navbar) {
   min-height: 0;

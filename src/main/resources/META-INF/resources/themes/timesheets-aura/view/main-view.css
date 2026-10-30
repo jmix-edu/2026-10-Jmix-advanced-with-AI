@@ -1,4 +1,4 @@
-/* Predefined styles for the MainView */
+/* Готовые стили для MainView */
 
 :where(:root),
 :where(:host) {
@@ -111,7 +111,7 @@ vaadin-app-layout.jmix-main-view-app-layout[has-drawer][drawer-opened]:not([over
     flex-grow: 1;
 }
 
-/* User Menu */
+/* Меню пользователя */
 
 .jmix-main-view-user-menu {
     margin-inline-start: auto;
@@ -191,7 +191,7 @@ vaadin-app-layout.jmix-main-view-app-layout[has-drawer][drawer-opened]:not([over
     display: none;
 }
 
-/* Initial Layout */
+/* Начальная раскладка */
 
 .jmix-initial-layout {
     --title-size: round(var(--aura-font-size-m) * 2.5, 0.0625rem);
@@ -255,13 +255,13 @@ vaadin-app-layout.jmix-main-view-app-layout[has-drawer][drawer-opened]:not([over
     }
 }
 
-/* MenuFilterField component */
+/* Компонент MenuFilterField */
 
 .jmix-main-view-navigation > .jmix-menu-filter-field {
     margin: var(--vaadin-padding-s) var(--vaadin-padding-m);
 }
 
-/* Search add-on */
+/* Дополнение Search */
 
 .jmix-main-view-navigation > .jmix-search-field {
     display: flex;

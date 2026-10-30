@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Time tracking rules from specs/01_data_manipulation/05-time-entry-rules.spec.adoc,
- * exercised through DataManager without any UI.
+ * Правила учёта времени из specs/01_data_manipulation/05-time-entry-rules.spec.adoc,
+ * проверяются через DataManager без UI.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
@@ -51,7 +51,7 @@ class TimeEntryRulesTest {
     private final List<UUID> userIds = new ArrayList<>();
     private final List<UUID> clientIds = new ArrayList<>();
 
-    // --- П1: closed project, inactive task ---
+    // --- П1: закрытый проект, неактивная задача ---
 
     @Test
     void cannotCreateEntryForInactiveTask() {
@@ -93,7 +93,7 @@ class TimeEntryRulesTest {
         assertThat(approved.getStatus()).isEqualTo(TimeEntryStatus.APPROVED);
     }
 
-    // --- П2: spent time ---
+    // --- П2: затраченное время ---
 
     @Test
     void zeroSpentTimeIsRejected() {
@@ -140,7 +140,7 @@ class TimeEntryRulesTest {
         newEntry(task, user, DAY, 60);
     }
 
-    // --- П3: status lifecycle ---
+    // --- П3: жизненный цикл статуса ---
 
     @Test
     void newEntryMustStartAsNew() {
@@ -217,7 +217,7 @@ class TimeEntryRulesTest {
         assertThat(reload(entry).getDeletedDate()).isNull();
     }
 
-    // --- billing (specs/01_data_manipulation/07-billing-store.spec.adoc) ---
+    // --- биллинг (specs/01_data_manipulation/07-billing-store.spec.adoc) ---
 
     @Test
     void approvedEntryIsClosedOnlyWithBillingRecord() {
@@ -263,7 +263,7 @@ class TimeEntryRulesTest {
         assertThat(loadIncludingDeleted(entry).getDeletedDate()).isNotNull();
     }
 
-    // --- П4: closing a project ---
+    // --- П4: закрытие проекта ---
 
     @Test
     void projectWithApprovedEntriesCannotBeClosed() {
@@ -297,7 +297,7 @@ class TimeEntryRulesTest {
         assertThat(reload(otherProject).getStatus()).isEqualTo(TimeEntryStatus.APPROVED);
     }
 
-    // --- П5: deletion ---
+    // --- П5: удаление ---
 
     @Test
     void projectWithClosedEntryCannotBeDeleted() {
@@ -333,7 +333,7 @@ class TimeEntryRulesTest {
         assertThat(loadIncludingDeleted(entry).getDeletedDate()).isNotNull();
     }
 
-    // --- fixtures ---
+    // --- тестовые данные ---
 
     private User user() {
         User user = dataManager.create(User.class);
@@ -390,7 +390,7 @@ class TimeEntryRulesTest {
     }
 
     /**
-     * Closes an approved entry the way MonthClosingService does: together with a billing record id.
+     * Закрывает одобренное списание так же, как MonthClosingService: вместе с id записи биллинга.
      */
     private TimeEntry closeApproved(TimeEntry entry) {
         TimeEntry loaded = reload(entry);
@@ -433,14 +433,14 @@ class TimeEntryRulesTest {
             cause = cause.getCause();
         }
         assertThat(cause).as("cause chain of %s", thrown).isInstanceOf(TimeEntryRuleException.class);
-        // Messages returns the bare key when it is missing from the bundle.
+        // Messages возвращает голый ключ, если его нет в бандле.
         assertThat(cause.getMessage()).doesNotStartWith("timeEntry.").doesNotStartWith("project.");
     }
 
     @AfterEach
     void tearDown() {
-        // Plain SQL: soft delete would leave rows in the file-based test database,
-        // and the rules forbid removing closed entries.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе,
+        // а правила запрещают удалять закрытые списания.
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         for (UUID clientId : clientIds) {
             String projectIds = "select ID from TS_PROJECT where CLIENT_ID = ?";

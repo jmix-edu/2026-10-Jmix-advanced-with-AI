@@ -1,0 +1,57 @@
+/*
+ * <ts-week-sheet>: недельная таблица на RevoGrid, specs/02_ui_development/05-week-sheet.spec.adoc.
+ * RevoGrid рисует в light DOM, поэтому эти правила достают до его ячеек. Цвета берутся из нейтральных к теме
+ * токенов --vaadin-* и статусных цветов Aura, и те и другие определены в Aura 25.1.
+ */
+
+/* Пользовательский элемент по умолчанию inline; RevoGrid нужен блок с высотой, чтобы разложить свой viewport. */
+ts-week-sheet {
+    display: block;
+    min-height: 16em;
+}
+
+ts-week-sheet revo-grid {
+    height: 100%;
+}
+
+/* Подписи задач — самый длинный текст в таблице, держим их в одну строку. */
+ts-week-sheet .ts-week-sheet__caption {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Время выровнено вправо, как числа в электронной таблице. */
+ts-week-sheet .ts-week-sheet__day,
+ts-week-sheet .ts-week-sheet__total {
+    text-align: right;
+}
+
+/*
+ * Правила для ячеек ниже сильнее правил темы RevoGrid для его ячеек, например
+ * "revo-grid:is([theme=compact],[theme=darkCompact]) revogr-data .rgCell { box-shadow: ... }" (вертикальные границы).
+ * Простое "ts-week-sheet .ts-week-sheet__error" им проигрывает, и красная рамка не появляется, поэтому каждое правило
+ * для ячейки называет ещё revo-grid, revogr-data и .rgCell.
+ */
+
+/* Утверждено, закрыто, отклонено или несколько списаний: значение видно, но не редактируется. */
+ts-week-sheet revo-grid revogr-data .rgCell.ts-week-sheet__locked {
+    color: var(--vaadin-text-color-secondary);
+    background-color: var(--vaadin-background-container);
+}
+
+/* Не время (проверяется, пока пользователь вводит) или отклонено сервером при сохранении; причина — в подсказке ячейки. */
+ts-week-sheet revo-grid revogr-data .rgCell.ts-week-sheet__error {
+    color: var(--aura-red-text);
+    box-shadow: inset 0 0 0 1px var(--aura-red-text);
+}
+
+ts-week-sheet .ts-week-sheet__total {
+    font-weight: var(--aura-font-weight-semibold);
+}
+
+/* "Paste from Excel..." рядом с кнопками: подсказка, а не содержимое. */
+.ts-week-sheet-hint {
+    color: var(--vaadin-text-color-secondary);
+    font-size: var(--aura-font-size-s);
+}

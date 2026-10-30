@@ -13,9 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * Projects at a glance, open without signing in: specs/03_access_control/02-public-dashboard.spec.adoc.
- * No layout on purpose: an anonymous visitor has no main view and no menu. Access is the anonymous role's
- * view policy, not {@code @AnonymousAllowed}, so it shows in the resource roles.
+ * Проекты с первого взгляда, доступно без входа: specs/03_access_control/02-public-dashboard.spec.adoc.
+ * Без layout намеренно: у анонимного посетителя нет главного экрана и меню. Доступ даёт политика экрана анонимной
+ * роли, а не {@code @AnonymousAllowed}, поэтому он виден в ресурсных ролях.
  */
 @Route("public/dashboard")
 @ViewController(id = "ts_PublicDashboardView")

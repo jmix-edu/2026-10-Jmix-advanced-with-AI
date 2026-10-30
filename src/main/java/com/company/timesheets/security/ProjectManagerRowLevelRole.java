@@ -11,8 +11,8 @@ import io.jmix.security.role.annotation.RowLevelRole;
 import org.springframework.context.ApplicationContext;
 
 /**
- * Project manager: changes a project, its tasks and participants only where they take part as the manager.
- * In-memory checks: the project form opens read-only elsewhere and saving there is refused.
+ * Руководитель проекта: меняет проект, его задачи и участников только там, где он участвует как руководитель.
+ * Проверки в памяти: в остальных проектах форма открывается только для чтения, а сохранение отклоняется.
  */
 @RowLevelRole(name = "Project manager: own projects", code = ProjectManagerRowLevelRole.CODE)
 public interface ProjectManagerRowLevelRole {

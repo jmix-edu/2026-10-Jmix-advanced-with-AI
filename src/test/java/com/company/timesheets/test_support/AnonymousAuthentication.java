@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.function.Supplier;
 
 /**
- * Runs code as the built-in anonymous user, with the same token the application gets before signing in.
+ * Выполняет код от встроенного анонимного пользователя с тем же токеном, что приложение получает до входа.
  */
 public final class AnonymousAuthentication {
 

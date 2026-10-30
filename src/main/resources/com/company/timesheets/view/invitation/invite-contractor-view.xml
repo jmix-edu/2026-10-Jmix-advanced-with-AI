@@ -25,7 +25,7 @@
             <textField id="firstNameField" label="msg://firstName.label"/>
             <textField id="lastNameField" label="msg://lastName.label"/>
             <emailField id="emailField" label="msg://email.label" required="true" colspan="2"/>
-            <!-- Not bound to a container, so the entity is given by metaClass. -->
+            <!-- Не привязано к контейнеру, поэтому сущность задаётся через metaClass. -->
             <entityComboBox id="projectRoleField" label="msg://projectRole.label" required="true"
                             metaClass="ts_ProjectRole" itemsContainer="projectRolesDc"/>
             <datePicker id="contractEndDateField" label="msg://contractEndDate.label" required="true"/>

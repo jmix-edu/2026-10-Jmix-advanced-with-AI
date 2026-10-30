@@ -56,7 +56,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    // Secrets of the prod profile (spec 04/01); Spring Cloud 2025.1.x is the line for Spring Boot 4.0
+    // Секреты профиля prod (spec 04/01); для Spring Boot 4.0 нужна линейка Spring Cloud 2025.1.x
     implementation platform('org.springframework.cloud:spring-cloud-dependencies:2025.1.3')
     implementation 'org.springframework.cloud:spring-cloud-starter-vault-config'
 
@@ -98,8 +98,8 @@ vaadin {
     productionMode = false
 }
 
-// Dev tools only outside the production build: ./gradlew -Pvaadin.productionMode=true bootJar (spec 04/01).
-// Placed after the vaadin block so that the effective mode is read with the settings above.
+// Dev-инструменты только вне продакшн-сборки: ./gradlew -Pvaadin.productionMode=true bootJar (spec 04/01).
+// Стоит после блока vaadin, чтобы итоговый режим читался уже с настройками выше.
 if (!vaadin.effective.productionMode.get()) {
     dependencies {
         implementation 'com.vaadin:vaadin-dev'

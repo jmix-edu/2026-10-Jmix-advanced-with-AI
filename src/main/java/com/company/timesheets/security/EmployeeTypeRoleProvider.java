@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Each {@code employeeType} value of the LDAP user is one more role code, on top of the groups (spec 03/06).
+ * Каждое значение {@code employeeType} пользователя LDAP — ещё один код роли в дополнение к группам (спека 03/06).
  */
 @Component("ts_EmployeeTypeRoleProvider")
 public class EmployeeTypeRoleProvider implements LdapUserAdditionalRoleProvider {

@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * The public dashboard from the anonymous user's side: specs/03_access_control/02-public-dashboard.spec.adoc.
+ * Публичный дашборд со стороны анонимного пользователя: specs/03_access_control/02-public-dashboard.spec.adoc.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -73,7 +73,7 @@ class PublicDashboardTest {
         List<DashboardValue> byTaskType = withAnonymous(userRepository, coreProperties,
                 () -> dashboardService.hoursByTaskType(month));
 
-        // 1:30 approved + 0:30 closed; the new 2:00 and the rejected 1:00 do not count.
+        // 1:30 одобренных + 0:30 закрытых; новые 2:00 и отклонённый 1:00 не считаются.
         assertThat(hoursOf(byProject, fixture.prefix + "project")).isEqualByComparingTo("2.00");
         assertThat(hoursOf(byTaskType, fixture.prefix + "type")).isEqualByComparingTo("2.00");
     }
@@ -94,7 +94,7 @@ class PublicDashboardTest {
     @Test
     void anonymousReadsNoEntitiesDirectly() {
         runWithAnonymous(userRepository, coreProperties, () -> {
-            // The fixture has a project, entries, a client and the admin user, so "nothing" means "closed".
+            // В тестовых данных есть проект, списания, клиент и пользователь admin, поэтому "ничего" значит "закрыто".
             for (Class<?> entityClass : List.of(Project.class, TimeEntry.class, Client.class, User.class)) {
                 List<?>[] loaded = {List.of()};
                 Throwable thrown = catchThrowable(() -> loaded[0] = dataManager.load(entityClass).all().list());

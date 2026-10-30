@@ -5,9 +5,9 @@ import io.jmix.security.role.annotation.JpqlRowLevelPolicy;
 import io.jmix.security.role.annotation.RowLevelRole;
 
 /**
- * Employee and contractor: own time entries, plus those of projects where they are an approver.
- * Policies of different row-level roles on one entity are joined with AND, so a user gets either this role or
- * managed-time-entries, never both.
+ * Сотрудник и подрядчик: свои списания и списания проектов, где он согласующий.
+ * Политики разных ролей уровня строк на одну сущность объединяются через AND, поэтому пользователь получает либо
+ * эту роль, либо managed-time-entries, но не обе.
  */
 @RowLevelRole(name = "Own time entries", code = OwnTimeEntriesRowLevelRole.CODE)
 public interface OwnTimeEntriesRowLevelRole {

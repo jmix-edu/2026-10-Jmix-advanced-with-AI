@@ -1,7 +1,7 @@
 package com.company.timesheets.service;
 
 /**
- * An invitation refused for a reason the inviting manager should read.
+ * Приглашение отклонено по причине, которую должен увидеть приглашающий менеджер.
  */
 public class InvitationException extends RuntimeException {
 

@@ -1,6 +1,6 @@
 #!/bin/sh
-# Starts the application (spec 04/02). With VAULT_APPROLE_DIR the AppRole credentials that vault-init wrote
-# are read from files, so they never appear in the compose file or in the image.
+# Запускает приложение (spec 04/02). При VAULT_APPROLE_DIR учётные данные AppRole, записанные vault-init,
+# читаются из файлов, поэтому их нет ни в compose-файле, ни в образе.
 set -eu
 
 if [ -n "${VAULT_APPROLE_DIR:-}" ]; then

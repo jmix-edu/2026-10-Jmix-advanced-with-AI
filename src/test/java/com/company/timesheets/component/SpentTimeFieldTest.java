@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Value conversion of {@link SpentTimeField}, from specs/02_ui_development/04-spent-time-field.spec.adoc.
+ * Преобразование значения {@link SpentTimeField} по specs/02_ui_development/04-spent-time-field.spec.adoc.
  */
 class SpentTimeFieldTest {
 

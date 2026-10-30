@@ -54,8 +54,8 @@
                        classNames="jmix-initial-layout-logo"/>
             </div>
             <!--
-                This is the work area - central part of the view.
-                Put your components here.
+                Это рабочая область - центральная часть экрана.
+                Размещайте компоненты здесь.
             -->
         </initialLayout>
     </appLayout>

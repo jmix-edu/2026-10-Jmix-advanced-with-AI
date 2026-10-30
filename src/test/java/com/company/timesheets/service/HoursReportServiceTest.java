@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Reports from specs/01_data_manipulation/06-hours-reports.spec.adoc. Assertions look only at the projects
- * created by the test, so data left by others does not matter.
+ * Отчёты из specs/01_data_manipulation/06-hours-reports.spec.adoc. Проверки смотрят только на проекты,
+ * созданные тестом, поэтому данные, оставленные другими, не мешают.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
@@ -58,7 +58,7 @@ class HoursReportServiceTest {
     private final List<UUID> clientIds = new ArrayList<>();
     private final List<UUID> roleIds = new ArrayList<>();
 
-    // --- hours by project and user ---
+    // --- часы по проекту и пользователю ---
 
     @Test
     void countsOnlyApprovedAndClosedTime() {
@@ -130,7 +130,7 @@ class HoursReportServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // --- project summaries ---
+    // --- сводки по проектам ---
 
     @Test
     void summaryHasTotalAndCurrentMonthTime() {
@@ -181,7 +181,7 @@ class HoursReportServiceTest {
         assertThat(summaryOf(closed).getStatus()).isEqualTo(ProjectStatus.CLOSED);
     }
 
-    // --- helpers ---
+    // --- вспомогательные методы ---
 
     private List<KeyValueEntity> rowsOf(Project project) {
         return hoursReportService.loadHoursByProjectAndUser(FROM, TO).stream()
@@ -261,7 +261,7 @@ class HoursReportServiceTest {
     }
 
     private void close(TimeEntry entry) {
-        // Approved time is closed only into a billing record; the record itself is not needed here.
+        // Одобренное время закрывается только в запись биллинга; сама запись здесь не нужна.
         entry.setStatus(TimeEntryStatus.CLOSED);
         entry.setBillingRecordId(UUID.randomUUID());
         dataManager.saveWithoutReload(entry);
@@ -275,8 +275,8 @@ class HoursReportServiceTest {
 
     @AfterEach
     void tearDown() {
-        // Plain SQL: soft delete would leave rows in the file-based test database,
-        // and the time entry rules forbid removing closed entries.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе,
+        // а правила списаний запрещают удалять закрытые списания.
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         for (UUID clientId : clientIds) {
             String projectIds = "select ID from TS_PROJECT where CLIENT_ID = ?";

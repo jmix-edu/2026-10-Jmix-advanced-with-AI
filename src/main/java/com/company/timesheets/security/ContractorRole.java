@@ -10,8 +10,8 @@ import io.jmix.security.role.annotation.EntityPolicy;
 import io.jmix.security.role.annotation.ResourceRole;
 
 /**
- * Contractor: as an employee, but without the project's description and client.
- * Policies only add up, so this role does not extend Employee: it lists the project attributes it may see.
+ * Подрядчик: как сотрудник, но без описания и клиента проекта.
+ * Политики только складываются, поэтому роль не расширяет Employee: она перечисляет атрибуты проекта, которые видит.
  */
 @ResourceRole(name = "Contractor", code = ContractorRole.CODE, scope = SecurityScope.UI)
 public interface ContractorRole extends TimesheetsBaseRole {
@@ -24,7 +24,7 @@ public interface ContractorRole extends TimesheetsBaseRole {
             action = EntityAttributePolicyAction.VIEW)
     void projectAttributes();
 
-    // The project form loads the client list for its combo box; with no attributes nothing of a client is shown.
+    // Форма проекта загружает список клиентов для комбобокса; без атрибутов от клиента ничего не видно.
     @EntityPolicy(entityClass = Client.class, actions = EntityPolicyAction.READ)
     void client();
 }

@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Registers the application's own UI components so view descriptors can use them.
- * The loader is found by the element's local name; the namespace is for the XSD and Studio.
+ * Регистрирует собственные UI-компоненты приложения, чтобы их можно было использовать в дескрипторах экранов.
+ * Загрузчик находится по локальному имени элемента; пространство имён нужно для XSD и Studio.
  */
 @Configuration
 public class TimesheetsComponentsConfiguration {
@@ -16,6 +16,14 @@ public class TimesheetsComponentsConfiguration {
     public ComponentRegistration spentTimeField() {
         return ComponentRegistrationBuilder.create(SpentTimeField.class)
                 .withComponentLoader("spentTimeField", SpentTimeFieldLoader.class)
+                .build();
+    }
+
+    // <ts:weekSheet>: недельная таблица на основе RevoGrid (specs/02_ui_development/05-week-sheet.spec.adoc).
+    @Bean
+    public ComponentRegistration weekSheet() {
+        return ComponentRegistrationBuilder.create(WeekSheet.class)
+                .withComponentLoader("weekSheet", WeekSheetLoader.class)
                 .build();
     }
 }

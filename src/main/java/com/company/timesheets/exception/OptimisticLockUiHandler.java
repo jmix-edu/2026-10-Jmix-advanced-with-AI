@@ -20,9 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Tells the user who changed the object, and when, if a save fails because someone saved it first.
- * Runs before the standard Jmix handler ({@code @Order(150)}) and leaves the exception to it when the object
- * has no audit attributes or is gone.
+ * Сообщает пользователю, кто и когда изменил объект, если сохранение не прошло, потому что кто-то сохранил его раньше.
+ * Срабатывает до стандартного обработчика Jmix ({@code @Order(150)}) и оставляет исключение ему, если у объекта
+ * нет атрибутов аудита или его уже нет.
  */
 @Component("ts_OptimisticLockUiHandler")
 @Order(100)
@@ -32,7 +32,7 @@ public class OptimisticLockUiHandler extends AbstractUiExceptionHandler {
     private static final String MODIFIED_BY = "lastModifiedBy";
     private static final String MODIFIED_DATE = "lastModifiedDate";
     /**
-     * A merge conflict carries no object, only its text: "The object [com.company.Entity-uuid [detached]] ...".
+     * Конфликт merge не содержит объекта, только его текст: "The object [com.company.Entity-uuid [detached]] ...".
      */
     private static final Pattern STALE_OBJECT = Pattern.compile("\\[([\\w.$]+)-([0-9a-fA-F-]{36})[\\s\\]]");
 
@@ -69,8 +69,8 @@ public class OptimisticLockUiHandler extends AbstractUiExceptionHandler {
     }
 
     /**
-     * The message for a failed save: which object, who saved it last and when. Empty when the object cannot be
-     * found again or does not record its last modification.
+     * Возвращает сообщение о неудачном сохранении: какой объект, кто и когда сохранил его последним. Пусто, если объект
+     * не удаётся найти снова или он не хранит последнее изменение.
      */
     public Optional<String> describe(@Nullable Throwable throwable) {
         StaleObject stale = staleObject(throwable);

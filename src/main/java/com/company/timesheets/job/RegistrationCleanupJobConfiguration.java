@@ -10,9 +10,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The cleanup job and its schedule. Jmix Quartz stores jobs in the database and overwrites them from these beans
- * on start (spring.quartz.overwriteExistingJobs=true in its module.properties), so there is no duplicate and a new
- * cron applies after a restart.
+ * Задание очистки и его расписание. Jmix Quartz хранит задания в базе и при старте перезаписывает их из этих бинов
+ * (spring.quartz.overwriteExistingJobs=true в его module.properties), поэтому дубликатов нет, а новый
+ * cron начинает действовать после перезапуска.
  */
 @Configuration
 public class RegistrationCleanupJobConfiguration {

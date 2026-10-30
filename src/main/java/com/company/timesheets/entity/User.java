@@ -42,7 +42,7 @@ public class User implements JmixUserDetails, HasTimeZone {
     @NotNull
     private Boolean needsActivation = false;
 
-    // Last day a contractor may sign in (spec 03/05); empty means no limit.
+    // Последний день, когда подрядчик может войти (спека 03/05); пусто — без ограничения.
     @Column(name = "CONTRACT_END_DATE")
     private LocalDate contractEndDate;
 
@@ -189,8 +189,8 @@ public class User implements JmixUserDetails, HasTimeZone {
     }
 
     /**
-     * False from the day after the contract end date: Spring Security then refuses sign-in with
-     * AccountExpiredException. The end date itself is still a working day; "today" is the server's date.
+     * Возвращает false со дня, следующего за датой окончания контракта: тогда Spring Security отказывает во входе
+     * с AccountExpiredException. Сама дата окончания ещё рабочий день; «сегодня» — дата сервера.
      */
     @Override
     public boolean isAccountNonExpired() {

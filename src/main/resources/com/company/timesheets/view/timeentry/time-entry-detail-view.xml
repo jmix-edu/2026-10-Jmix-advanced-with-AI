@@ -21,7 +21,7 @@
         <action id="closeAction" type="detail_close"/>
     </actions>
     <layout>
-        <!-- Status badge right under the title: the title itself belongs to the dialog or the main view. -->
+        <!-- Бейдж статуса сразу под заголовком: сам заголовок принадлежит диалогу или главному экрану. -->
         <span id="statusBadge"/>
         <formLayout id="form" dataContainer="timeEntryDc">
             <responsiveSteps>

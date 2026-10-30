@@ -35,8 +35,8 @@ import static com.company.timesheets.test_support.AnonymousAuthentication.withAn
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Removing registrations not activated in time: specs/03_access_control/04-registration-cleanup.spec.adoc.
- * The cleanup is called with no authentication, as the Quartz scheduler thread calls it.
+ * Удаление регистраций, не активированных вовремя: specs/03_access_control/04-registration-cleanup.spec.adoc.
+ * Очистка вызывается без аутентификации, как её вызывает поток планировщика Quartz.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -81,7 +81,7 @@ class RegistrationCleanupTest {
         });
         SecurityContextHolder.clearContext();
 
-        // As the scheduler thread: no authentication at all.
+        // Как поток планировщика: аутентификации нет совсем.
         int removed = registrationService.removeExpiredRegistrations();
 
         assertThat(removed).isGreaterThanOrEqualTo(1);

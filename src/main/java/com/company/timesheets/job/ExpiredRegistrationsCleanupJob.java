@@ -7,9 +7,9 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Removes registrations not activated in time: specs/03_access_control/04-registration-cleanup.spec.adoc.
- * Only a trigger: the work and its authentication are in {@link RegistrationService#removeExpiredRegistrations()}.
- * Quartz creates the job through Spring, so the service is injected.
+ * Удаляет регистрации, не активированные вовремя: specs/03_access_control/04-registration-cleanup.spec.adoc.
+ * Только запускает: работа и её аутентификация — в {@link RegistrationService#removeExpiredRegistrations()}.
+ * Quartz создаёт задание через Spring, поэтому сервис внедряется.
  */
 @DisallowConcurrentExecution
 public class ExpiredRegistrationsCleanupJob implements Job {

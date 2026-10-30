@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * A calendar week from Monday to Sunday, whatever the locale.
+ * Календарная неделя с понедельника по воскресенье при любой локали.
  */
 public record WeekPeriod(LocalDate start) {
 
@@ -26,15 +26,15 @@ public record WeekPeriod(LocalDate start) {
     }
 
     /**
-     * The week the date falls in.
+     * Возвращает неделю, в которую попадает дата.
      */
     public static WeekPeriod of(LocalDate date) {
         return new WeekPeriod(date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)));
     }
 
     /**
-     * The week of an ISO date such as {@code 2026-10-12}; any day of the week will do. Empty when the text is
-     * not a date.
+     * Возвращает неделю ISO-даты вида {@code 2026-10-12}; подходит любой день недели. Пусто, если текст
+     * не дата.
      */
     public static Optional<WeekPeriod> parse(String text) {
         if (text == null || text.isBlank()) {
@@ -68,8 +68,8 @@ public record WeekPeriod(LocalDate start) {
     }
 
     /**
-     * Minutes spent on each day of the week, Monday first. Rejected entries and entries of other weeks
-     * do not count, as in the daily limit.
+     * Возвращает минуты, затраченные в каждый день недели, начиная с понедельника. Отклонённые списания и списания
+     * других недель не учитываются, как и в дневном лимите.
      */
     public Map<LocalDate, Long> minutesByDay(Collection<TimeEntry> entries) {
         Map<LocalDate, Long> minutes = new LinkedHashMap<>();

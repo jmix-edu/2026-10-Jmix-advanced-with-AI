@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Week arithmetic and totals of the «My week» view, from specs/02_ui_development/01-my-week.spec.adoc.
+ * Арифметика недель и итоги экрана «Моя неделя» по specs/02_ui_development/01-my-week.spec.adoc.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -85,7 +85,7 @@ class WeekPeriodTest {
     }
 
     private TimeEntry entry(LocalDate date, long minutes, TimeEntryStatus status) {
-        // Not saved: the totals only read the attributes.
+        // Не сохраняем: итоги только читают атрибуты.
         TimeEntry entry = metadata.create(TimeEntry.class);
         entry.setDate(date);
         entry.setSpentTime(new SpentTime(minutes));

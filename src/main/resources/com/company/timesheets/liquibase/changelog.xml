@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <!-- DO NOT REMOVE. This is a master changelog that runs all other changelogs. -->
+    <!-- НЕ УДАЛЯТЬ. Это главный changelog, он запускает все остальные changelog-и. -->
 
     <property name="byte[].type" dbms="postgresql" value="bytea"/>
     <property name="offsetDateTime.type" dbms="postgresql" value="timestamp with time zone"/>

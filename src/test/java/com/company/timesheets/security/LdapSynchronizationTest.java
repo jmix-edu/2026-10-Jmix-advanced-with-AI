@@ -11,10 +11,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.ldap.core.DirContextAdapter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+
+import javax.sql.DataSource;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -26,9 +29,9 @@ import static com.company.timesheets.test_support.AnonymousAuthentication.runWit
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * LDAP sign-in synchronization without a live server: specs/03_access_control/06-ldap.spec.adoc.
- * The user's LDAP entry is a {@link DirContextAdapter}; groups come as authorities, as the add-on passes them.
- * Synchronization runs as the anonymous user, like on the sign-in request; setup and checks run as system.
+ * Синхронизация при входе через LDAP без живого сервера: specs/03_access_control/06-ldap.spec.adoc.
+ * LDAP-запись пользователя — {@link DirContextAdapter}; группы приходят как authorities, как их передаёт аддон.
+ * Синхронизация идёт от анонимного пользователя, как при запросе входа; подготовка и проверки — от system.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -46,6 +49,8 @@ class LdapSynchronizationTest {
     private UserRepository userRepository;
     @Autowired
     private CoreProperties coreProperties;
+    @Autowired
+    private DataSource dataSource;
 
     private final List<String> usernames = new ArrayList<>();
 
@@ -125,24 +130,21 @@ class LdapSynchronizationTest {
         assertThat(roles(username)).containsExactly("managed-time-entries:" + RoleAssignmentRoleType.ROW_LEVEL);
     }
 
+    /**
+     * Физическое удаление через SQL, как в других тестах с пользователями: назначения ролей, удалённые через
+     * DataManager, оставались в базе после каждого прогона.
+     */
     @AfterEach
     void cleanUp() {
-        systemAuthenticator.runWithSystem(() -> usernames.forEach(this::remove));
-    }
-
-    private void remove(String username) {
-            dataManager.load(RoleAssignmentEntity.class)
-                    .query("select a from sec_RoleAssignmentEntity a where a.username = :username")
-                    .parameter("username", username)
-                    .list().forEach(dataManager::remove);
-            dataManager.load(User.class)
-                    .query("select u from ts_User u where u.username = :username")
-                    .parameter("username", username)
-                    .optional().ifPresent(dataManager::remove);
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        usernames.forEach(username -> {
+            jdbc.update("delete from SEC_ROLE_ASSIGNMENT where USERNAME = ?", username);
+            jdbc.update("delete from TS_USER where USERNAME = ?", username);
+        });
     }
 
     /**
-     * What the add-on does on sign-in: groups plus the extra roles from the entry, then synchronization.
+     * Что делает аддон при входе: группы плюс дополнительные роли из записи, затем синхронизация.
      */
     private void synchronize(DirContextAdapter entry, List<String> groups) {
         String username = entry.getStringAttribute("uid");

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Own UI components of the application, used in view descriptors as
+<!-- Собственные UI-компоненты приложения; в дескрипторах экранов подключаются как
      xmlns:ts="http://company.com/timesheets/schema/components". -->
 <xs:schema targetNamespace="http://company.com/timesheets/schema/components"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -21,6 +21,24 @@
                 <xs:extension base="layout:baseFieldComponent">
                     <xs:attributeGroup ref="layout:hasRequired"/>
                     <xs:attributeGroup ref="layout:hasValidation"/>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="weekSheet">
+        <xs:annotation>
+            <xs:documentation>
+                Spreadsheet-like week table on top of the RevoGrid JS library: rows, one column per day,
+                a time value in each cell. The view gives it the model from code.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:complexContent>
+                <xs:extension base="layout:baseComponent">
+                    <xs:attributeGroup ref="layout:hasSize"/>
+                    <xs:attributeGroup ref="layout:hasClassNames"/>
+                    <xs:attribute name="readOnly" type="xs:boolean"/>
                 </xs:extension>
             </xs:complexContent>
         </xs:complexType>

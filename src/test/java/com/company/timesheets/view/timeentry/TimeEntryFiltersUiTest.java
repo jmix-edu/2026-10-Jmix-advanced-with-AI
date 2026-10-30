@@ -42,8 +42,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Saved filter configurations of the time entry list from specs/01_data_manipulation/08-queries-locking.spec.adoc.
- * Runs the real view descriptor, so the JPQL macros are the ones users get.
+ * Сохранённые конфигурации фильтра списка списаний по specs/01_data_manipulation/08-queries-locking.spec.adoc.
+ * Работает с настоящим дескриптором экрана, поэтому JPQL-макросы те же, что у пользователей.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})
@@ -103,7 +103,7 @@ class TimeEntryFiltersUiTest {
     void myLastWeekShowsOnlyMyEntriesOfTheLastSevenDays() {
         Set<UUID> shown = shownWith("myLastWeek", null);
 
-        // Not mineSevenDaysAgo (outside the window), not othersToday (someone else's).
+        // Не mineSevenDaysAgo (вне окна) и не othersToday (чужое).
         assertThat(shown).containsExactlyInAnyOrder(mineToday.getId(), mineSixDaysAgo.getId());
     }
 
@@ -123,7 +123,7 @@ class TimeEntryFiltersUiTest {
     }
 
     /**
-     * Opens the list as admin, applies the configuration and returns the ids of this test's entries it shows.
+     * Открывает список от admin, применяет конфигурацию и возвращает id списаний этого теста, которые он показывает.
      */
     @SuppressWarnings("unchecked")
     private Set<UUID> shownWith(String configurationId, Object propertyValue) {
@@ -189,7 +189,7 @@ class TimeEntryFiltersUiTest {
 
     @AfterEach
     void tearDown() {
-        // Plain SQL: soft delete would leave rows in the file-based test database.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе.
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         for (UUID clientId : clientIds) {
             String projectsOfClient = "select ID from TS_PROJECT where CLIENT_ID = ?";

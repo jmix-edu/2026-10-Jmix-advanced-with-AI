@@ -1,23 +1,23 @@
 package com.company.timesheets.security;
 
 /**
- * Specific policies of the application. Code checks these policies, never role names;
- * see specs/03_access_control/01-roles.spec.adoc.
+ * Специфические политики приложения. Код проверяет эти политики, а не имена ролей;
+ * см. specs/03_access_control/01-roles.spec.adoc.
  */
 public final class TimesheetsPolicies {
 
     /**
-     * Close a month of a project into billing.
+     * Закрыть месяц проекта в биллинг.
      */
     public static final String MONTH_CLOSING = "ts.monthClosing.close";
 
     /**
-     * Approve or reject any time entry without being its project's manager or approver (admin).
+     * Одобрить или отклонить любое списание, не будучи руководителем или согласующим его проекта (admin).
      */
     public static final String APPROVE_ANY_TIME_ENTRY = "ts.timeEntry.approveAny";
 
     /**
-     * Invite a contractor to any project, not only to one the user manages (admin), spec 03/05.
+     * Пригласить подрядчика в любой проект, а не только в тот, которым руководит пользователь (admin), спека 03/05.
      */
     public static final String INVITE_CONTRACTOR_ANYWHERE = "ts.contractor.inviteAny";
 

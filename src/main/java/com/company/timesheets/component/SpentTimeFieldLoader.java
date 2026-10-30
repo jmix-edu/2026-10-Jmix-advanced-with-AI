@@ -4,8 +4,8 @@ import io.jmix.flowui.xml.layout.loader.AbstractComponentLoader;
 import io.jmix.flowui.xml.layout.support.DataLoaderSupport;
 
 /**
- * Loads {@code <ts:spentTimeField>}: the same attributes as standard fields, with {@code property} and
- * {@code dataContainer} taken from the element or its {@code formLayout}.
+ * Загружает {@code <ts:spentTimeField>}: те же атрибуты, что у стандартных полей, а {@code property} и
+ * {@code dataContainer} берутся из элемента или из его {@code formLayout}.
  */
 public class SpentTimeFieldLoader extends AbstractComponentLoader<SpentTimeField> {
 

@@ -45,9 +45,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Month closing from specs/01_data_manipulation/07-billing-store.spec.adoc: approved time goes into the reports
- * store, entries become CLOSED, a repeat converges instead of duplicating. The period lock from
- * specs/01_data_manipulation/08-queries-locking.spec.adoc: one closing per project at a time.
+ * Закрытие месяца по specs/01_data_manipulation/07-billing-store.spec.adoc: одобренное время уходит в хранилище
+ * отчётов, списания становятся CLOSED, повтор сходится, а не дублирует. Блокировка периода по
+ * specs/01_data_manipulation/08-queries-locking.spec.adoc: одно закрытие на проект за раз.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
@@ -186,7 +186,7 @@ class MonthClosingServiceTest {
         Task task = task(project);
         User alice = user();
         TimeEntry entry = approved(task, alice, DAY, 60);
-        // The reports store committed, the main one did not: the record exists, the entry is still APPROVED.
+        // Хранилище отчётов закоммитилось, основное — нет: запись есть, списание всё ещё APPROVED.
         BillingRecord orphan = dataManager.create(BillingRecord.class);
         orphan.setProjectId(project.getId());
         orphan.setProjectName(project.getName());
@@ -243,7 +243,7 @@ class MonthClosingServiceTest {
         List<BillingRecord> stored = storedRecords(project);
         assertThat(stored).hasSize(1);
         assertClosedInto(entry, stored.getFirst());
-        // The lock is gone after the first closing committed.
+        // После коммита первого закрытия блокировки уже нет.
         assertThat(monthClosingService.closeMonth(project.getId(), MONTH)).hasSize(1);
     }
 
@@ -309,7 +309,7 @@ class MonthClosingServiceTest {
         assertClosedInto(entry, storedRecords(project).getFirst());
     }
 
-    // --- helpers ---
+    // --- вспомогательные методы ---
 
     private static List<Throwable> causes(Throwable thrown) {
         List<Throwable> causes = new ArrayList<>();
@@ -409,8 +409,8 @@ class MonthClosingServiceTest {
         for (UUID projectId : projectIds) {
             reports.update("delete from TS_BILLING_RECORD where PROJECT_ID = ?", projectId);
         }
-        // Plain SQL: soft delete would leave rows in the file-based test database,
-        // and the time entry rules forbid removing closed entries.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе,
+        // а правила списаний запрещают удалять закрытые списания.
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         for (UUID clientId : clientIds) {
             String projectsOfClient = "select ID from TS_PROJECT where CLIENT_ID = ?";
@@ -429,8 +429,8 @@ class MonthClosingServiceTest {
     }
 
     /**
-     * Makes saving a billing record fail on demand, standing in for an unavailable reports database, or holds
-     * the next save until released, keeping a closing in progress with its lock taken.
+     * По запросу ломает сохранение записи биллинга, изображая недоступную базу отчётов, или задерживает
+     * следующее сохранение до освобождения, удерживая закрытие в процессе со взятой блокировкой.
      */
     @TestConfiguration
     static class ReportsStoreHook {

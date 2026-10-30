@@ -1,6 +1,6 @@
 #!/bin/sh
-# First start of the Docker stack (spec 04/02): random passwords into the "secrets" volume.
-# An existing file is never overwritten, so a later start changes nothing.
+# Первый запуск Docker-стека (spec 04/02): случайные пароли в том "secrets".
+# Существующий файл не перезаписывается, поэтому следующие запуски ничего не меняют.
 set -eu
 
 DIR=/secrets
@@ -9,7 +9,7 @@ generate() {
     name="$1"
     if [ ! -s "$DIR/$name" ]; then
         tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > "$DIR/$name"
-        # Readable by the database and LDAP processes that run under their own users
+        # Доступен на чтение процессам БД и LDAP, которые работают под своими пользователями
         chmod 0444 "$DIR/$name"
         echo "generated $name"
         return 0
@@ -22,7 +22,7 @@ generate reports_db_password || true
 generate ldap_admin_password || true
 generate ldap_config_password || true
 
-# The two passwords people sign in with are shown once, when they are created
+# Два пароля для входа людей показываются один раз, при создании
 if generate admin_initial_password; then
     echo "admin password (application): $(cat "$DIR/admin_initial_password")"
 fi

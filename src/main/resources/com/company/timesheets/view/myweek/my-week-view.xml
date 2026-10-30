@@ -5,9 +5,9 @@
     <data>
         <collection id="timeEntriesDc"
                     class="com.company.timesheets.entity.TimeEntry">
-            <!-- _base already brings task and task.project: the instance names of TimeEntry and Task depend on them. -->
+            <!-- _base уже загружает task и task.project: от них зависят имена экземпляров TimeEntry и Task. -->
             <fetchPlan extends="_base"/>
-            <!-- Loaded by the controller once the week is known: :weekStart and :weekEnd come from the URL. -->
+            <!-- Загружает контроллер, когда неделя известна: :weekStart и :weekEnd приходят из URL. -->
             <loader id="timeEntriesDl" readOnly="true">
                 <query>
                     <![CDATA[select e from ts_TimeEntry e

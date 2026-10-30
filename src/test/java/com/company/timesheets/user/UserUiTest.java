@@ -24,7 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Sample UI integration test for the User entity.
+ * Пример UI-интеграционного теста для сущности User.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})
@@ -39,19 +39,19 @@ public class UserUiTest {
 
     @Test
     void test_createUser() {
-        // Navigate to user list view
+        // Переходим на экран списка пользователей
         viewNavigators.view(UiTestUtils.getCurrentView(), UserListView.class).navigate();
 
         UserListView userListView = UiTestUtils.getCurrentView();
 
-        // click "Create" button
+        // Нажимаем кнопку "Create"
         JmixButton createBtn = UiTestUtils.getComponent(userListView, "createButton");
         createBtn.click();
 
-        // Get detail view
+        // Получаем экран редактирования
         UserDetailView userDetailView = UiTestUtils.getCurrentView();
 
-        // Set username and password in the fields
+        // Заполняем поля имени пользователя и пароля
         TypedTextField<String> usernameField = UiTestUtils.getComponent(userDetailView, "usernameField");
         String username = "test-user-" + System.currentTimeMillis();
         usernameField.setValue(username);
@@ -62,14 +62,14 @@ public class UserUiTest {
         JmixPasswordField confirmPasswordField = UiTestUtils.getComponent(userDetailView, "confirmPasswordField");
         confirmPasswordField.setValue("test-passwd");
 
-        // Click "OK"
+        // Нажимаем "OK"
         JmixButton commitAndCloseBtn = UiTestUtils.getComponent(userDetailView, "saveAndCloseButton");
         commitAndCloseBtn.click();
 
-        // Get navigated user list view
+        // Получаем экран списка пользователей, на который перешли
         userListView = UiTestUtils.getCurrentView();
 
-        // Check the created user is shown in the table
+        // Проверяем, что созданный пользователь показан в таблице
         DataGrid<User> usersDataGrid = UiTestUtils.getComponent(userListView, "usersDataGrid");
 
         DataGridItems<User> usersDataGridItems = usersDataGrid.getItems();

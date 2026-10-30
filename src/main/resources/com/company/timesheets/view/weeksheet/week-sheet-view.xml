@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Неделя в виде электронной таблицы, specs/02_ui_development/05-week-sheet.spec.adoc.
+     Без контейнеров данных: модель таблица получает от контроллера, списания загружает и сохраняет сервис. -->
+<view xmlns="http://jmix.io/schema/flowui/view"
+      xmlns:ts="http://company.com/timesheets/schema/components"
+      title="msg://weekSheetView.title">
+    <!-- Таблица занимает всю высоту, что осталась после двух панелей над ней. -->
+    <layout expand="weekSheet">
+        <hbox id="weekPanel" alignItems="CENTER">
+            <button id="previousWeekButton" text="msg://previousWeek.text"/>
+            <span id="weekCaption"/>
+            <button id="nextWeekButton" text="msg://nextWeek.text"/>
+        </hbox>
+        <hbox id="buttonsPanel" alignItems="CENTER">
+            <button id="saveButton" text="msg://save.text" themeNames="primary" enabled="false"/>
+            <button id="discardButton" text="msg://discard.text" enabled="false"/>
+            <span id="hintText" text="msg://hint.text" classNames="ts-week-sheet-hint"/>
+        </hbox>
+        <!-- Наш собственный компонент, зарегистрирован в TimesheetsComponentsConfiguration вместе с WeekSheetLoader. -->
+        <ts:weekSheet id="weekSheet" width="100%"/>
+    </layout>
+</view>

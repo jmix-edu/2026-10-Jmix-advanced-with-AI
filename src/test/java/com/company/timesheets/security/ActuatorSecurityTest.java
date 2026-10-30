@@ -13,8 +13,8 @@ import java.net.http.HttpResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * What Actuator shows without sign-in: specs/04_deployment_operations/01-production-profile.spec.adoc.
- * Real HTTP requests to a started server, no session, redirects not followed.
+ * Что Actuator показывает без входа: specs/04_deployment_operations/01-production-profile.spec.adoc.
+ * Настоящие HTTP-запросы к запущенному серверу, без сессии, редиректы не выполняются.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

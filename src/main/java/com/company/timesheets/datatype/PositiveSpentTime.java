@@ -10,10 +10,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Spent time must be more than {@code 0:00}; {@code null} is left to {@code @NotNull}.
+ * Затраченное время должно быть больше {@code 0:00}; {@code null} проверяет {@code @NotNull}.
  * <p>
- * Put it in the {@code UiComponentChecks} group: then the form shows the error under the field, while JPA
- * (which validates only the default group on persist) leaves the same rule to {@code TimeEntryRulesListener}.
+ * Входит в группу {@code UiComponentChecks}: тогда форма показывает ошибку под полем, а JPA
+ * (при persist проверяет только группу по умолчанию) оставляет это правило {@code TimeEntryRulesListener}.
  */
 @Documented
 @Constraint(validatedBy = PositiveSpentTimeValidator.class)

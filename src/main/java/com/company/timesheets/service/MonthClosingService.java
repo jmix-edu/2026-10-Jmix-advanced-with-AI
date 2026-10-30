@@ -31,27 +31,27 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Closes a project's month: approved time goes into {@link BillingRecord}s in the {@code reports} store and the
- * entries become {@code CLOSED}.
+ * Закрывает месяц проекта: утверждённое время попадает в {@link BillingRecord} в хранилище {@code reports},
+ * а списания получают статус {@code CLOSED}.
  * <p>
- * The two stores have separate transactions. Entries are changed first inside the main transaction (rules and
- * optimistic locks fire on save), billing records are committed next, and the main transaction commits last.
- * If that last commit fails, the billing record is left ahead of the entries; running the operation again fixes
- * it, because a record's time is always recalculated from the entries linked to it, never accumulated.
+ * У двух хранилищ раздельные транзакции. Сначала в основной транзакции меняются списания (при сохранении
+ * срабатывают правила и оптимистичные блокировки), затем коммитятся записи биллинга, последней — основная транзакция.
+ * Если последний коммит упадёт, запись биллинга обгонит списания; повторный запуск это исправит, потому что время
+ * записи всегда пересчитывается из привязанных к ней списаний, а не накапливается.
  * <p>
- * Closings of one project run one at a time: a pessimistic lock on the project is held from before the main
- * transaction starts until after it commits, so the next closing sees the entries already closed.
+ * Закрытия одного проекта идут по одному: пессимистичная блокировка проекта держится с момента до начала
+ * основной транзакции и до её коммита, поэтому следующее закрытие видит списания уже закрытыми.
  */
 @Service
 public class MonthClosingService {
 
     /**
-     * Pessimistic lock name; the lock id is the project id.
+     * Имя пессимистичной блокировки; id блокировки — id проекта.
      */
     public static final String LOCK_NAME = "ts_MonthClosing";
 
-    // Unconstrained: closing must bill every approved entry of the month, not the ones the caller can see.
-    // Who may close is the month-closing policy, checked in closeMonth.
+    // Без ограничений: закрытие должно выставить в биллинг все утверждённые списания месяца, а не видимые вызывающему.
+    // Кто может закрывать, решает политика закрытия месяца, её проверяет closeMonth.
     private final UnconstrainedDataManager dataManager;
     private final LockManager lockManager;
     private final TransactionTemplate transaction;
@@ -67,11 +67,11 @@ public class MonthClosingService {
     }
 
     /**
-     * Bills the project's approved entries dated within the month and returns the month's records of the project,
-     * one per user, ordered by username. Only past months can be closed.
+     * Выставляет в биллинг утверждённые списания проекта за месяц и возвращает записи проекта за месяц,
+     * по одной на пользователя, отсортированные по username. Закрыть можно только прошедшие месяцы.
      *
-     * @throws MonthClosingLockedException if a closing of the same project is already running
-     * @throws AccessDeniedException if the user lacks the {@link TimesheetsPolicies#MONTH_CLOSING} policy
+     * @throws MonthClosingLockedException если закрытие того же проекта уже идёт
+     * @throws AccessDeniedException если у пользователя нет политики {@link TimesheetsPolicies#MONTH_CLOSING}
      */
     public List<BillingRecord> closeMonth(UUID projectId, YearMonth month) {
         if (!projectAccessSupport.isPermitted(TimesheetsPolicies.MONTH_CLOSING)) {
@@ -121,7 +121,7 @@ public class MonthClosingService {
             return sorted(records.values());
         }
 
-        // 1. Close and link the entries. Not committed yet, but flushed: the rules have already run.
+        // 1. Закрываем и привязываем списания. Ещё не закоммичено, но сброшено в БД: правила уже отработали.
         Map<UUID, BillingRecord> touched = new HashMap<>();
         SaveContext entries = new SaveContext();
         for (TimeEntry entry : approved) {
@@ -138,7 +138,7 @@ public class MonthClosingService {
         }
         dataManager.save(entries.setDiscardSaved(true));
 
-        // 2. Recalculate from every entry linked to the records, including the ones just linked.
+        // 2. Пересчитываем по всем списаниям, привязанным к записям, включая только что привязанные.
         Map<UUID, Long> minutes = dataManager.loadValues("""
                         select e.billingRecordId, sum(e.spentTime) from ts_TimeEntry e
                         where e.billingRecordId in :ids
@@ -155,7 +155,7 @@ public class MonthClosingService {
             billing.saving(record);
         }
 
-        // 3. The reports store commits here, in its own transaction; the main one commits when this method returns.
+        // 3. Хранилище reports коммитится здесь, в своей транзакции; основная коммитится при выходе из метода.
         EntitySet saved = dataManager.save(billing);
         for (BillingRecord record : saved.getAll(BillingRecord.class)) {
             records.put(record.getUserId(), record);
@@ -176,7 +176,7 @@ public class MonthClosingService {
     }
 
     /**
-     * SUM over the SpentTime column skips the converter and returns a plain number.
+     * SUM по колонке SpentTime обходит конвертер и возвращает просто число.
      */
     private static long toLong(Object value) {
         return value == null ? 0 : ((Number) value).longValue();

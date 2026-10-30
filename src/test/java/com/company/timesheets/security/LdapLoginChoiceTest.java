@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Who signs in with the database password: specs/03_access_control/06-ldap.spec.adoc.
- * The test LDAP URL points to a closed port, so nobody gets in through LDAP here.
+ * Кто входит с паролем из базы: specs/03_access_control/06-ldap.spec.adoc.
+ * Тестовый URL LDAP указывает на закрытый порт, поэтому через LDAP здесь не входит никто.
  */
 @SpringBootTest
 @ActiveProfiles("test")

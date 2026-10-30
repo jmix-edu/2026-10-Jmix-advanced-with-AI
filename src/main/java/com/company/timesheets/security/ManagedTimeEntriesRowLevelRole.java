@@ -5,8 +5,8 @@ import io.jmix.security.role.annotation.JpqlRowLevelPolicy;
 import io.jmix.security.role.annotation.RowLevelRole;
 
 /**
- * Project manager: own time entries, plus those of projects where they are a manager or an approver.
- * Instead of own-time-entries, not together with it: policies on one entity are joined with AND.
+ * Руководитель проекта: свои списания и списания проектов, где он руководитель или согласующий.
+ * Вместо own-time-entries, а не вместе с ней: политики на одну сущность объединяются через AND.
  */
 @RowLevelRole(name = "Managed time entries", code = ManagedTimeEntriesRowLevelRole.CODE)
 public interface ManagedTimeEntriesRowLevelRole {

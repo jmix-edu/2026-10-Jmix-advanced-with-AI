@@ -28,12 +28,13 @@ To start the application, use the **Timesheets Jmix Application** run configurat
 The application will be available at <http://localhost:8080>.
 
 Without an active profile the application runs with the `dev` profile (`application-dev.properties`).
-It reads passwords from environment variables:
+It needs no settings: the local demo credentials are defaults in that file.
+Environment variables override them:
 
-* `DB_USERNAME`, `DB_PASSWORD` — the main database `ts_live`;
-* `REPORTS_DB_PASSWORD` (and optionally `REPORTS_DB_USERNAME`, `root` by default) — the reports database `ts_reports`;
-* `LDAP_MANAGER_PASSWORD` — the demo LDAP server;
-* `UI_LOGIN_DEFAULT_PASSWORD` — optional, fills the password on the login form.
+* `DB_USERNAME`, `DB_PASSWORD` — the main database `ts_live` (`jmix`/`jmix` by default);
+* `REPORTS_DB_USERNAME`, `REPORTS_DB_PASSWORD` — the reports database `ts_reports` (`root`/`root` by default);
+* `LDAP_MANAGER_PASSWORD` — the demo LDAP server (`admin` by default);
+* `UI_LOGIN_DEFAULT_PASSWORD` — the password filled in on the login form (`admin` by default).
 
 The default user credentials in development are:
 * Login: `admin`

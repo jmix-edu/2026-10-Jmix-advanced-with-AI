@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * LDAP groups to application roles (spec 03/06). Any other authority passes as a role code, so the row-level
- * codes from {@link EmployeeTypeRoleProvider} work; codes that name no role are dropped by the add-on.
+ * Сопоставляет группы LDAP ролям приложения (спека 03/06). Любой другой authority проходит как код роли, поэтому
+ * коды ролей уровня строк из {@link EmployeeTypeRoleProvider} работают; коды без роли дополнение отбрасывает.
  */
 @Component("ts_LdapRoleMapper")
 public class TimesheetsLdapRoleMapper implements LdapAuthorityToJmixRoleCodesMapper {

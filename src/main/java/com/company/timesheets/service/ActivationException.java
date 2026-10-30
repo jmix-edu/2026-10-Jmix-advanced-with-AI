@@ -1,7 +1,7 @@
 package com.company.timesheets.service;
 
 /**
- * Activation refused: the link is not valid any more or the password does not fit. The message is for the user.
+ * Активация отклонена: ссылка больше не действует или пароль не подходит. Сообщение показывается пользователю.
  */
 public class ActivationException extends RuntimeException {
 

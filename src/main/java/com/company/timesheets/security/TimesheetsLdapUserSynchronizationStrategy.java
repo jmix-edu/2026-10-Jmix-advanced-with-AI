@@ -6,8 +6,8 @@ import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.stereotype.Component;
 
 /**
- * Creates or updates the application user from LDAP on every LDAP sign-in (spec 03/06).
- * Role assignments are replaced by the add-on according to {@link TimesheetsLdapRoleMapper}.
+ * Создаёт или обновляет пользователя приложения из LDAP при каждом входе через LDAP (спека 03/06).
+ * Назначения ролей дополнение заменяет по {@link TimesheetsLdapRoleMapper}.
  */
 @Component("ts_LdapUserSynchronizationStrategy")
 public class TimesheetsLdapUserSynchronizationStrategy extends AbstractLdapUserDetailsSynchronizationStrategy<User> {
@@ -17,7 +17,7 @@ public class TimesheetsLdapUserSynchronizationStrategy extends AbstractLdapUserD
         return User.class;
     }
 
-    // The password stays empty: LDAP checks it, and an empty password keeps the user off the database sign-in.
+    // Пароль остаётся пустым: его проверяет LDAP, а пустой пароль не пускает пользователя во вход по базе.
     @Override
     protected User createUserDetails(String username, DirContextOperations ctx) {
         User user = super.createUserDetails(username, ctx);

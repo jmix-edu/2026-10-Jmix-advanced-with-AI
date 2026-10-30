@@ -15,9 +15,9 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * A contractor's participation in a project, waiting for the contractor to activate their account
- * (specs/03_access_control/05-contractor-invitation.spec.adoc). On activation it becomes a ProjectParticipant
- * and is removed. Not a participant yet, so an unactivated contractor is not "in" the project.
+ * Участие подрядчика в проекте, которое ждёт, пока подрядчик активирует учётную запись
+ * (specs/03_access_control/05-contractor-invitation.spec.adoc). При активации превращается в ProjectParticipant
+ * и удаляется. Это ещё не участник, поэтому неактивированный подрядчик не входит в проект.
  */
 @JmixEntity
 @Entity(name = "ts_ContractorInvitation")
@@ -39,8 +39,8 @@ public class ContractorInvitation {
     @Column(name = "VERSION", nullable = false)
     private Integer version;
 
-    // The registration cleanup removes invitations itself before the user (RegistrationService); with
-    // DataManager.remove(user) alone the foreign key fails.
+    // Очистка регистраций сама удаляет приглашения до пользователя (RegistrationService); если вызвать только
+    // DataManager.remove(user), сработает внешний ключ.
     @NotNull
     @OnDeleteInverse(DeletePolicy.CASCADE)
     @JoinColumn(name = "USER_ID", nullable = false)
@@ -59,7 +59,7 @@ public class ContractorInvitation {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private ProjectRole projectRole;
 
-    // Who invited; kept for the email and history, cleared if that user is removed.
+    // Кто пригласил; хранится для письма и истории, очищается, если этого пользователя удалят.
     @OnDeleteInverse(DeletePolicy.UNLINK)
     @JoinColumn(name = "INVITED_BY_ID")
     @ManyToOne(fetch = FetchType.LAZY)

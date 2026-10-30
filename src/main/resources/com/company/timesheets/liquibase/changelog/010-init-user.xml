@@ -6,7 +6,7 @@
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
         logicalFilePath="com/company/timesheets/liquibase/changelog/010-init-user.xml">
 
-    <!-- DO NOT REMOVE. This changelog is required for user management. -->
+    <!-- НЕ УДАЛЯТЬ. Этот changelog нужен для управления пользователями. -->
 
     <changeSet id="1" author="timesheets" context="!cuba">
 

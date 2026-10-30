@@ -11,8 +11,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Formats {@link SpentTime} as {@code hours:minutes} and parses {@code 2:30}, {@code 0:5} or bare hours {@code 2}.
- * The format does not depend on the locale.
+ * Форматирует {@link SpentTime} как {@code hours:minutes} и разбирает {@code 2:30}, {@code 0:5} или просто часы {@code 2}.
+ * Формат не зависит от локали.
  */
 @DatatypeDef(id = "spentTime",
         javaClass = SpentTime.class,

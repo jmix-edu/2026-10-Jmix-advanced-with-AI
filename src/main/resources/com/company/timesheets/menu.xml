@@ -6,6 +6,7 @@
         <item view="TimeEntries.my" title="msg://com.company.timesheets.view.mytimeentries/myTimeEntries.title"/>
         <item view="Tasks.my" title="msg://com.company.timesheets.view.task/myTasksListView.title"/>
         <item view="TimeEntries.myWeek" title="msg://com.company.timesheets.view.myweek/myWeekView.title"/>
+        <item view="TimeEntries.weekSheet" title="msg://com.company.timesheets.view.weeksheet/weekSheetView.title"/>
         <item view="ts_Task.list-simple" title="msg://com.company.timesheets.view.task/taskListSimpleView.title"/>
     </menu>
     <menu opened="true" id="projects" description="msg://com.company.timesheets/menu_config.projects.description"

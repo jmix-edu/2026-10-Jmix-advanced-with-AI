@@ -7,7 +7,7 @@ import io.jmix.securityflowui.role.annotation.MenuPolicy;
 import io.jmix.securityflowui.role.annotation.ViewPolicy;
 
 /**
- * Closing a month of a project into billing. Code checks the policy, not this role.
+ * Закрытие месяца проекта в биллинг. Код проверяет политику, а не эту роль.
  */
 @ResourceRole(name = "Month closing", code = MonthClosingRole.CODE, scope = SecurityScope.UI)
 public interface MonthClosingRole {

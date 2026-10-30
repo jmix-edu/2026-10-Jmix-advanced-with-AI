@@ -22,7 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Read-only reports on approved and closed time. Archived (soft-deleted) records are not counted.
+ * Отчёты только для чтения по утверждённому и закрытому времени. Архивные (soft-deleted) записи не учитываются.
  */
 @Service
 public class HoursReportService {
@@ -38,14 +38,14 @@ public class HoursReportService {
     }
 
     /**
-     * Counted time per project and user for the period, both bounds included.
-     * Each row has {@code project}, {@code user}, {@code totalTime} ({@link SpentTime}) and {@code entryCount}.
+     * Возвращает учтённое время по проектам и пользователям за период, обе границы включены.
+     * В каждой строке есть {@code project}, {@code user}, {@code totalTime} ({@link SpentTime}) и {@code entryCount}.
      */
     public List<KeyValueEntity> loadHoursByProjectAndUser(LocalDate from, LocalDate to) {
         if (from == null || to == null || from.isAfter(to)) {
             throw new IllegalArgumentException("Invalid period: " + from + " - " + to);
         }
-        // Grouping by ids keeps the SQL valid on every database; entities are loaded once below.
+        // Группировка по id даёт корректный SQL на любой БД; сущности загружаются один раз ниже.
         List<KeyValueEntity> rows = dataManager.loadValues("""
                         select e.task.project.id, e.user.id, sum(e.spentTime), count(e)
                         from ts_TimeEntry e
@@ -70,7 +70,7 @@ public class HoursReportService {
     }
 
     /**
-     * Totals for every non-archived project, open and closed, ordered by name.
+     * Возвращает итоги по всем неархивным проектам, открытым и закрытым, по алфавиту.
      */
     public List<ProjectSummary> loadProjectSummaries() {
         List<Project> projects = dataManager.load(Project.class)
@@ -103,7 +103,7 @@ public class HoursReportService {
     }
 
     /**
-     * Counted minutes per project id; without a period, for all time.
+     * Возвращает учтённые минуты по id проекта; без периода — за всё время.
      */
     private Map<UUID, Long> sumByProject(LocalDate from, LocalDate to) {
         String period = from == null ? "" : " and e.date between :from and :to";
@@ -133,8 +133,8 @@ public class HoursReportService {
     }
 
     /**
-     * SUM/COUNT result as a long. SUM over the SpentTime column skips the converter and returns a plain number
-     * whose type depends on the database (BigDecimal on HSQLDB).
+     * Возвращает результат SUM/COUNT как long. SUM по колонке SpentTime обходит конвертер и возвращает число,
+     * тип которого зависит от БД (BigDecimal в HSQLDB).
      */
     private static long toLong(Object value) {
         return value == null ? 0 : ((Number) value).longValue();

@@ -34,7 +34,7 @@
         <genericFilter id="genericFilter"
                        dataLoader="timeEntriesDl">
             <properties include=".*"/>
-            <!-- Dates come from JPQL macros evaluated at load time, not from Java code. -->
+            <!-- Даты дают JPQL-макросы, которые вычисляются при загрузке, а не Java-код. -->
             <configurations>
                 <configuration id="myLastWeek" name="msg://filter.myLastWeek">
                     <jpqlFilter id="myLastWeekFilter" parameterName="myLastWeek"

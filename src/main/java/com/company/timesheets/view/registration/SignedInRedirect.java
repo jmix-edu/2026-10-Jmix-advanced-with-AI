@@ -6,7 +6,7 @@ import io.jmix.core.security.CurrentAuthentication;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 
 /**
- * Registration and activation are for visitors: a signed-in user goes to the main view instead.
+ * Регистрация и активация — для посетителей: вошедший пользователь вместо них попадает на главный экран.
  */
 final class SignedInRedirect {
 
@@ -14,7 +14,7 @@ final class SignedInRedirect {
     }
 
     /**
-     * @return true when the navigation was forwarded and the view must not go on
+     * @return true, если навигация перенаправлена и экран не должен продолжать
      */
     static boolean forwardIfSignedIn(BeforeEnterEvent event, CurrentAuthentication currentAuthentication) {
         boolean signedIn = currentAuthentication.isSet()

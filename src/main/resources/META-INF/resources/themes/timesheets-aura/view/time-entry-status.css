@@ -1,6 +1,6 @@
-/* Rejected time entries in grids (partNameGenerator returns rejected-row).
-   Aura has no light red fill token, so the tint is defined once from --aura-red.
-   It is a background-image layer: the row's selection and hover background stays visible under it. */
+/* Отклонённые списания в гридах (partNameGenerator возвращает rejected-row).
+   В Aura нет токена светло-красной заливки, поэтому оттенок задан один раз от --aura-red.
+   Это слой background-image: фон выделения и наведения строки остаётся виден под ним. */
 html {
     --ts-rejected-row-background: color-mix(in srgb, var(--aura-red) 12%, transparent);
 }

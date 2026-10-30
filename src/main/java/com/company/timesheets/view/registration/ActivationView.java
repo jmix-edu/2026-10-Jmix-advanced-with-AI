@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Activation by the emailed link: the user sets a password, gets the employee roles and is signed in.
- * See specs/03_access_control/03-registration.spec.adoc.
+ * Активация по ссылке из письма: пользователь задаёт пароль, получает роли сотрудника и входит в систему.
+ * См. specs/03_access_control/03-registration.spec.adoc.
  */
 @Route("activate")
 @ViewController(id = "ts_ActivationView")
@@ -96,7 +96,7 @@ public class ActivationView extends StandardView {
             notifications.create(e.getMessage()).withType(Notifications.Type.WARNING).show();
             return;
         }
-        // Signs in like the login view; on success LoginViewSupport opens the main view.
+        // Вход как на экране входа; при успехе LoginViewSupport открывает главный экран.
         loginViewSupport.authenticate(AuthDetails.of(username, password));
     }
 }

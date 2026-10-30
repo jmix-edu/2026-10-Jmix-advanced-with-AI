@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * Public sign-up by email: specs/03_access_control/03-registration.spec.adoc. No main view, the visitor is anonymous.
+ * Публичная регистрация по email: specs/03_access_control/03-registration.spec.adoc. Без главного экрана, посетитель анонимен.
  */
 @Route("register")
 @ViewController(id = "ts_RegistrationView")
@@ -63,7 +63,7 @@ public class RegistrationView extends StandardView {
                 firstNameField.getTypedValue(), lastNameField.getTypedValue());
         resultText.setVisible(true);
         if (result == RegistrationResult.LINK_SENT) {
-            // The same answer for any address: it does not tell whether the address is registered.
+            // Один и тот же ответ для любого адреса: он не выдаёт, зарегистрирован ли адрес.
             resultText.setText(messageBundle.getMessage("linkSent"));
             List.of(emailField, firstNameField, lastNameField, registerButton).forEach(c -> c.setVisible(false));
         } else {

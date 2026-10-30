@@ -22,11 +22,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Totals for the public dashboard, which anonymous visitors open (specs/03_access_control/02-public-dashboard).
+ * Итоги для публичного дашборда, который открывают анонимные посетители (specs/03_access_control/02-public-dashboard).
  * <p>
- * Reads without access constraints, because the anonymous user has no rights on entities, and returns
- * aggregates only: project and task type names with hours. No clients, users, descriptions or single entries.
- * Hours count as in the reports: approved and closed entries.
+ * Читает без ограничений доступа, потому что у анонимного пользователя нет прав на сущности, и возвращает
+ * только агрегаты: названия проектов и типов задач с часами. Без клиентов, пользователей, описаний и отдельных
+ * списаний. Часы считаются как в отчётах: утверждённые и закрытые списания.
  */
 @Service
 public class PublicDashboardService {
@@ -55,7 +55,7 @@ public class PublicDashboardService {
     }
 
     /**
-     * Open projects with time in the month, most hours first.
+     * Возвращает открытые проекты со временем за месяц, по убыванию часов.
      */
     public List<DashboardValue> hoursByProject(YearMonth month) {
         List<KeyValueEntity> rows = dataManager.loadValues("""
@@ -77,7 +77,7 @@ public class PublicDashboardService {
     }
 
     /**
-     * The given number of months up to the current one, oldest first; months without time are zero.
+     * Возвращает заданное число месяцев до текущего включительно, от старых к новым; месяцы без времени — нулевые.
      */
     public List<DashboardValue> hoursByMonth(int months) {
         YearMonth last = currentMonth();
@@ -101,7 +101,7 @@ public class PublicDashboardService {
     }
 
     /**
-     * Hours of the month by task type, most hours first; tasks without a type go together.
+     * Возвращает часы за месяц по типам задач, по убыванию часов; задачи без типа идут одной группой.
      */
     public List<DashboardValue> hoursByTaskType(YearMonth month) {
         return dataManager.loadValues("""
@@ -145,7 +145,7 @@ public class PublicDashboardService {
     }
 
     /**
-     * SUM over the SpentTime column skips the converter: a plain number whose type depends on the database.
+     * SUM по колонке SpentTime обходит конвертер: получается число, тип которого зависит от БД.
      */
     private static long toLong(Object value) {
         return value == null ? 0 : ((Number) value).longValue();

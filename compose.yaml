@@ -1,11 +1,11 @@
-# The whole stack with one command (spec 04/02): docker compose up -d --build
-# No passwords here: secrets-init generates them into the "secrets" volume on the first start.
+# Весь стек одной командой (spec 04/02): docker compose up -d --build
+# Паролей здесь нет: secrets-init генерирует их в том "secrets" при первом запуске.
 name: timesheets
 
 services:
   secrets-init:
     image: hashicorp/vault:2.1.2
-    # The vault image runs as the vault user; the volumes are written as root
+    # Образ vault работает от пользователя vault, а в тома пишем от root
     user: "0"
     entrypoint: ["/bin/sh", "/scripts/secrets-init.sh"]
     volumes:
@@ -50,7 +50,7 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # Demo directory: users and groups of spec 03/06, loaded on the first start
+  # Демо-каталог: пользователи и группы из spec 03/06, загружаются при первом запуске
   ldap:
     image: osixia/openldap:1.5.0
     environment:
@@ -92,7 +92,7 @@ services:
       - vault-data:/vault/file
       - ./docker/vault/config.hcl:/vault/config/config.hcl:ro
     healthcheck:
-      # Up, even while sealed: vault-init unseals it
+      # Считается живым и запечатанным: распечатывает его vault-init
       test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200'"]
       interval: 5s
       timeout: 3s
@@ -131,7 +131,7 @@ services:
       REPORTS_DB_URL: jdbc:postgresql://reports-db:5432/ts_reports
       REPORTS_DB_USERNAME: ts_reports
       TIMESHEETS_PUBLIC_URL: http://localhost:${APP_PORT:-8080}
-      # Mail is out of scope: there is no SMTP server in the stack, emails are not sent
+      # Почта вне рамок стека: SMTP-сервера в нём нет, письма не уходят
       MAIL_HOST: host.docker.internal
       MAIL_PORT: "2525"
       MAIL_FROM: timesheets@localhost

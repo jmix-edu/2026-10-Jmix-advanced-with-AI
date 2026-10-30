@@ -75,7 +75,7 @@ public class ClientListView extends StandardListView<Client> {
 
     @Subscribe
     public void onInit(final InitEvent event) {
-        // Apply security permissions
+        // Применяем права доступа
         createButton.setEnabled(getEntityContext().isCreatePermitted());
     }
 

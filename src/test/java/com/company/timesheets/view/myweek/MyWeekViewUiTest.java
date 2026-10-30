@@ -37,7 +37,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The «My week» view opened by a link to a week, from specs/02_ui_development/01-my-week.spec.adoc.
+ * Экран «Моя неделя», открытый по ссылке на неделю, по specs/02_ui_development/01-my-week.spec.adoc.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})
@@ -104,7 +104,7 @@ class MyWeekViewUiTest {
                     ViewControllerUtils.getViewData(view).getContainer("timeEntriesDc");
             assertThat(container.getItems()).extracting(TimeEntry::getId)
                     .containsExactlyInAnyOrder(mondayEntry.getId(), sundayEntry.getId(), rejectedEntry.getId());
-            // The project link reads task.project: it comes with the rows, not one query per row.
+            // Ссылка на проект читает task.project: он приходит вместе со строками, а не отдельным запросом на строку.
             assertThat(container.getItems()).allSatisfy(entry -> {
                 assertThat(entityStates.isLoaded(entry, "task")).isTrue();
                 assertThat(entityStates.isLoaded(entry.getTask(), "project")).isTrue();
@@ -112,7 +112,7 @@ class MyWeekViewUiTest {
             });
 
             Span weekTotal = UiTestUtils.getComponent(view, "weekTotal");
-            // 1:30 + 0:30; the rejected hour does not count.
+            // 1:30 + 0:30; отклонённый час не считается.
             assertThat(weekTotal.getText()).endsWith("2:00");
         });
     }
@@ -158,7 +158,7 @@ class MyWeekViewUiTest {
 
     @AfterEach
     void tearDown() {
-        // Plain SQL: soft delete would leave rows in the file-based test database.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе.
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         for (UUID clientId : clientIds) {
             String projectsOfClient = "select ID from TS_PROJECT where CLIENT_ID = ?";

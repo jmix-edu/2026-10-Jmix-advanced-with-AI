@@ -10,7 +10,7 @@ import io.jmix.security.role.annotation.EntityPolicy;
 import io.jmix.security.role.annotation.ResourceRole;
 
 /**
- * Employee: own time entries, projects they take part in with their description and client.
+ * Сотрудник: свои списания, проекты, в которых он участвует, с их описанием и клиентом.
  */
 @ResourceRole(name = "Employee", code = EmployeeRole.CODE, scope = SecurityScope.UI)
 public interface EmployeeRole extends TimesheetsBaseRole {
@@ -20,7 +20,7 @@ public interface EmployeeRole extends TimesheetsBaseRole {
     @EntityAttributePolicy(entityClass = Project.class, attributes = "*", action = EntityAttributePolicyAction.VIEW)
     void projectAttributes();
 
-    // The client's name in a project; there are no client screens for an employee.
+    // Имя клиента в проекте; экранов клиентов у сотрудника нет.
     @EntityAttributePolicy(entityClass = Client.class, attributes = "name", action = EntityAttributePolicyAction.VIEW)
     @EntityPolicy(entityClass = Client.class, actions = EntityPolicyAction.READ)
     void client();

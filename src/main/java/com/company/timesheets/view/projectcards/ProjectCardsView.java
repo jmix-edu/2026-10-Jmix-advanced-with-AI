@@ -22,8 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 /**
- * Projects as cards: client, status, hours of the current month, participants.
- * See specs/02_ui_development/03-project-cards.spec.adoc.
+ * Проекты в виде карточек: клиент, статус, часы за текущий месяц, участники.
+ * См. specs/02_ui_development/03-project-cards.spec.adoc.
  */
 @Route(value = "project-cards", layout = MainView.class)
 @ViewController(id = "Projects.cards")
@@ -66,7 +66,7 @@ public class ProjectCardsView extends StandardView {
         card.setTitle(summary.getProject().getName());
         card.setSubtitle(summary.getClient() == null ? "" : metadataTools.getInstanceName(summary.getClient()));
         card.setHeaderSuffix(statusBadge(summary.getStatus()));
-        // Lines go into one block: the card does not stack its content, inline spans would run together.
+        // Строки кладём в один блок: карточка не располагает содержимое столбиком, и inline-span слиплись бы.
         Div details = uiComponents.create(Div.class);
         details.addClassName("project-card-details");
         details.add(line(messageBundle.formatMessage("monthHours",
@@ -74,7 +74,7 @@ public class ProjectCardsView extends StandardView {
                 line(messageBundle.formatMessage("participants", summary.getParticipantCount())));
         card.add(details);
 
-        // A card is not a button: make it focusable and open the project on click and on Enter.
+        // Карточка — не кнопка: делаем её фокусируемой и открываем проект по клику и по Enter.
         Project project = summary.getProject();
         card.getElement().setAttribute("tabindex", "0");
         card.getElement().addEventListener("click", event -> openProject(project));

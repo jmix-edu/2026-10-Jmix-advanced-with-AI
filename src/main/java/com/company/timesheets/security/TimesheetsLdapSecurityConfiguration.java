@@ -10,8 +10,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.util.StringUtils;
 
 /**
- * Replaces the add-on's LDAP security configuration to change one rule (spec 03/06): whoever has a password in the
- * database signs in with it. LDAP users have none and go on to the LDAP check.
+ * Заменяет конфигурацию безопасности LDAP из дополнения, чтобы изменить одно правило (спека 03/06): у кого есть пароль
+ * в базе, входит с ним. У пользователей LDAP его нет, и они переходят к проверке через LDAP.
  */
 @Configuration
 public class TimesheetsLdapSecurityConfiguration extends LdapSecurityConfiguration {

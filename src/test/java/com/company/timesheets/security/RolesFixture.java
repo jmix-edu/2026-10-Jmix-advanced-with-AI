@@ -23,13 +23,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Two projects and users with the timesheet roles, from specs/03_access_control/01-roles.spec.adoc.
+ * Два проекта и пользователи с ролями табеля, по specs/03_access_control/01-roles.spec.adoc.
  * <ul>
- *     <li>A: pm is the manager, emp and con are members, apr is the approver, mgrEmp is a manager by participation
- *     but has the Employee role;</li>
- *     <li>B: pm and other are members.</li>
+ *     <li>A: pm — менеджер, emp и con — участники, apr — утверждающий, mgrEmp — менеджер по участию,
+ *     но с ролью Employee;</li>
+ *     <li>B: pm и other — участники.</li>
  * </ul>
- * Created as the system user, removed with plain SQL so that no soft-deleted rows stay.
+ * Создаются от системного пользователя, удаляются чистым SQL, чтобы не оставалось мягко удалённых строк.
  */
 class RolesFixture {
 

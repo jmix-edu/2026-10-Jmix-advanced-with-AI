@@ -37,8 +37,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Self-registration from the anonymous visitor's side: specs/03_access_control/03-registration.spec.adoc.
- * Emails are not sent: the Emailer is a mock that keeps what it was given.
+ * Самостоятельная регистрация со стороны анонимного посетителя: specs/03_access_control/03-registration.spec.adoc.
+ * Письма не отправляются: Emailer — мок, который сохраняет то, что ему передали.
  */
 @SpringBootTest
 @ActiveProfiles("test")

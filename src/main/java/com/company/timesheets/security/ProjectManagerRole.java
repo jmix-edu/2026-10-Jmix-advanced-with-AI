@@ -13,8 +13,8 @@ import io.jmix.securityflowui.role.annotation.MenuPolicy;
 import io.jmix.securityflowui.role.annotation.ViewPolicy;
 
 /**
- * Project manager: an employee who edits tasks and participants of the projects they manage and sees the time
- * entries there. Which projects is decided by the row-level roles project-manager-rows and managed-time-entries.
+ * Руководитель проекта: сотрудник, который правит задачи и участников своих проектов и видит в них
+ * списания. Какие это проекты, определяют роли уровня строк project-manager-rows и managed-time-entries.
  */
 @ResourceRole(name = "Project manager", code = ProjectManagerRole.CODE, scope = SecurityScope.UI)
 public interface ProjectManagerRole extends EmployeeRole {
@@ -35,8 +35,8 @@ public interface ProjectManagerRole extends EmployeeRole {
     @EntityPolicy(entityClass = ProjectParticipant.class, actions = EntityPolicyAction.ALL)
     void participantEditing();
 
-    // Update, not its attributes: the project form must be editable to save its tasks and participants,
-    // while the project's own fields stay read-only (VIEW from Employee).
+    // Update, но не его атрибуты: форма проекта должна быть редактируемой, чтобы сохранять задачи и участников,
+    // а собственные поля проекта остаются только для чтения (VIEW из Employee).
     @EntityPolicy(entityClass = Project.class, actions = {EntityPolicyAction.READ, EntityPolicyAction.UPDATE})
     void projectForm();
 }

@@ -13,8 +13,8 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Closed time of one user on one project for one month. Lives in the {@code reports} store, so the project
- * and the user are kept as ids and name snapshots, not as references.
+ * Закрытое время одного пользователя по одному проекту за один месяц. Хранится в хранилище {@code reports}, поэтому
+ * проект и пользователь сохранены как id и снимки имён, а не как ссылки.
  */
 @Store(name = "reports")
 @JmixEntity
@@ -50,7 +50,7 @@ public class BillingRecord {
     private String username;
 
     /**
-     * First day of the month.
+     * Первый день месяца.
      */
     @NotNull
     @Column(name = "MONTH_", nullable = false)

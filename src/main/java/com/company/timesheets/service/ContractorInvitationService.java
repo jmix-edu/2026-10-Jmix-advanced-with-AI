@@ -30,11 +30,11 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 /**
- * A project manager invites a contractor by email: specs/03_access_control/05-contractor-invitation.spec.adoc.
+ * Менеджер проекта приглашает подрядчика по email: specs/03_access_control/05-contractor-invitation.spec.adoc.
  * <p>
- * Managers have no rights on users and role assignments, so this service writes without access constraints
- * after checking that the caller manages the project (or holds the invite-anywhere policy).
- * The activation link and the activation itself are those of self-registration (RegistrationService).
+ * У менеджеров нет прав на пользователей и назначения ролей, поэтому сервис пишет без ограничений доступа,
+ * но сначала проверяет, что вызывающий управляет проектом (или имеет политику приглашения в любой проект).
+ * Ссылка активации и сама активация те же, что при самостоятельной регистрации (RegistrationService).
  */
 @Service
 public class ContractorInvitationService {
@@ -43,15 +43,15 @@ public class ContractorInvitationService {
 
     public enum InvitationResult {
         /**
-         * A new or still waiting contractor got an activation link.
+         * Новый или ещё не активированный подрядчик получил ссылку активации.
          */
         LINK_SENT,
         /**
-         * An active contractor was added to the project right away and notified.
+         * Активного подрядчика сразу добавили в проект и уведомили.
          */
         ADDED,
         /**
-         * Saved, but the email did not go out; inviting again sends a new link.
+         * Сохранено, но письмо не ушло; повторное приглашение отправит новую ссылку.
          */
         MAIL_FAILED
     }
@@ -83,7 +83,7 @@ public class ContractorInvitationService {
     }
 
     /**
-     * Whether the current user may invite contractors to the project.
+     * Проверяет, может ли текущий пользователь приглашать подрядчиков в проект.
      */
     public boolean canInvite(@Nullable Project project) {
         return projectAccessSupport.isPermitted(TimesheetsPolicies.INVITE_CONTRACTOR_ANYWHERE)
@@ -91,9 +91,9 @@ public class ContractorInvitationService {
     }
 
     /**
-     * Invites a contractor. A new address gets an inactive account; an address still waiting for activation gets
-     * a new link (the old one stops working) and the new contract end date; an active contractor joins the project
-     * at once. An active employee is refused: they are added as a participant, not invited.
+     * Приглашает подрядчика. Новый адрес получает неактивную учётную запись; адрес, ещё ждущий активации, получает
+     * новую ссылку (старая перестаёт работать) и новую дату окончания контракта; активный подрядчик сразу попадает
+     * в проект. Активному сотруднику отказ: его добавляют участником, а не приглашают.
      */
     public InvitationResult invite(Project project, @Nullable String firstName, @Nullable String lastName,
                                    String email, ProjectRole projectRole, LocalDate contractEndDate) {
@@ -173,7 +173,7 @@ public class ContractorInvitationService {
     }
 
     /**
-     * The invitation of the user to the project; an existing one only gets the new role.
+     * Возвращает приглашение пользователя в проект; у существующего меняется только роль.
      */
     private ContractorInvitation invitation(User user, boolean newUser, Project project, ProjectRole projectRole) {
         Optional<ContractorInvitation> existing = newUser

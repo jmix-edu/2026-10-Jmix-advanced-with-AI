@@ -30,7 +30,7 @@ import javax.sql.DataSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * What the timesheet roles leave open in the forms: specs/03_access_control/01-roles.spec.adoc.
+ * Что роли табеля оставляют открытым в формах: specs/03_access_control/01-roles.spec.adoc.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})

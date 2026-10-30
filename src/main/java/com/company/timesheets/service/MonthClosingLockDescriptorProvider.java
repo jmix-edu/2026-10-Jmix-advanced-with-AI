@@ -8,17 +8,17 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Registers the lock that serializes month closing of one project. Without a descriptor
- * {@code LockManager} does not lock the name at all.
+ * Регистрирует блокировку, которая выстраивает закрытия месяца одного проекта в очередь. Без дескриптора
+ * {@code LockManager} вообще не блокирует это имя.
  * <p>
- * The name is not an entity name on purpose: a descriptor named after {@code ts_Project} would also lock
- * the project detail view for everyone but the first editor.
+ * Имя намеренно не совпадает с именем сущности: дескриптор с именем {@code ts_Project} заблокировал бы и
+ * экран редактирования проекта для всех, кроме первого редактора.
  */
 @Component
 public class MonthClosingLockDescriptorProvider implements LockDescriptorProvider {
 
     /**
-     * Released in {@code finally} as soon as closing ends; the timeout only covers a hung thread.
+     * Снимается в {@code finally} сразу после закрытия; таймаут нужен только на случай зависшего потока.
      */
     private static final int TIMEOUT_SEC = 600;
 

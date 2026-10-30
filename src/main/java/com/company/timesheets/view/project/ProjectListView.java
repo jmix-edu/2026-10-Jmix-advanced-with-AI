@@ -43,7 +43,7 @@ public class ProjectListView extends StandardListView<Project> {
     private static final DateTimeFormatter LOCK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     /**
-     * Turns on the participant condition of the loader query; without it the condition is skipped.
+     * Включает условие по участнику в запросе загрузчика; без этого условие пропускается.
      */
     private static final String ONLY_MINE_PARAMETER = "onlyMine";
 
@@ -63,7 +63,7 @@ public class ProjectListView extends StandardListView<Project> {
     @Autowired
     private ProjectAccessSupport projectAccessSupport;
 
-    // «Close month» only with the month-closing policy (spec 03/01); the service checks it again.
+    // «Close month» — только с политикой закрытия месяца (спека 03/01); сервис проверяет её ещё раз.
     @Subscribe
     public void onInit(final InitEvent event) {
         projectsDataGrid.getAction("closeMonthAction")
@@ -115,7 +115,7 @@ public class ProjectListView extends StandardListView<Project> {
                     LOCK_TIME_FORMAT.format(e.getSince().toInstant().atZone(ZoneId.systemDefault()))));
             return;
         } catch (RuntimeException e) {
-            // A time entry rule arrives wrapped by the data layer; anything else goes to the standard handler.
+            // Правило списаний приходит обёрнутым слоем данных; всё остальное уходит стандартному обработчику.
             TimeEntryRuleException rule = findRuleViolation(e);
             if (rule == null) {
                 throw e;

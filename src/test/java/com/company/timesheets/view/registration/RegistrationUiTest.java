@@ -24,7 +24,7 @@ import static com.company.timesheets.test_support.AnonymousAuthentication.runWit
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Sign-up and activation screens for an anonymous visitor: specs/03_access_control/03-registration.spec.adoc.
+ * Экраны регистрации и активации для анонимного посетителя: specs/03_access_control/03-registration.spec.adoc.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})
@@ -68,7 +68,7 @@ class RegistrationUiTest {
 
     @Test
     void aSignedInUserIsSentToTheMainView() {
-        // @UiTest runs as the system user, which is signed in.
+        // @UiTest работает от системного пользователя, а он уже вошёл.
         viewNavigators.view(UiTestUtils.getCurrentView(), RegistrationView.class).navigate();
         View<?> current = UiTestUtils.getCurrentView();
 

@@ -49,8 +49,8 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 
 /**
- * Inviting a contractor by email: specs/03_access_control/05-contractor-invitation.spec.adoc.
- * The Emailer is a mock that keeps the emails; the link token is read from the email body.
+ * Приглашение подрядчика по email: specs/03_access_control/05-contractor-invitation.spec.adoc.
+ * Emailer — мок, который сохраняет письма; токен ссылки читается из тела письма.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -236,9 +236,9 @@ class ContractorInvitationTest {
                 + " join TS_PROJECT p on p.ID = i.PROJECT_ID where p.CLIENT_ID = ?", Long.class, clientId)).isZero();
     }
 
-    // --- helpers ---
+    // --- вспомогательные методы ---
 
-    // The activation view calls these as the anonymous visitor; here as the system user.
+    // Экран активации вызывает их от анонимного посетителя; здесь — от системного пользователя.
     private String activate(String token, String password) {
         return systemAuthenticator.withSystem(() -> registrationService.activate(token, password));
     }

@@ -34,8 +34,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The current user's time entries of one week, Monday to Sunday, with day and week totals.
- * The week is kept in the {@code week} URL parameter, see specs/02_ui_development/01-my-week.spec.adoc.
+ * Списания текущего пользователя за одну неделю, с понедельника по воскресенье, с итогами по дням и за неделю.
+ * Неделя хранится в URL-параметре {@code week}, см. specs/02_ui_development/01-my-week.spec.adoc.
  */
 @Route(value = "my-week", layout = MainView.class)
 @ViewController(id = "TimeEntries.myWeek")
@@ -71,15 +71,15 @@ public class MyWeekView extends StandardView {
     private WeekPeriod week;
 
     /**
-     * Fires before the view is shown and again when the view is reopened with other parameters,
-     * so a link to a week always opens that week.
+     * Срабатывает перед показом экрана и снова, когда экран открывают с другими параметрами,
+     * поэтому ссылка на неделю всегда открывает эту неделю.
      */
     @Subscribe
     public void onQueryParametersChange(final QueryParametersChangeEvent event) {
         String requested = event.getQueryParameters().getSingleParameter(WEEK_PARAMETER).orElse(null);
         Optional<WeekPeriod> parsed = WeekPeriod.parse(requested);
         WeekPeriod shown = parsed.orElseGet(this::currentWeek);
-        // Put the canonical Monday into the URL, or remove a value that is not a date.
+        // Записываем в URL канонический понедельник или убираем значение, которое не является датой.
         boolean urlNeedsFix = requested != null && !shown.start().toString().equals(requested);
         showWeek(shown, urlNeedsFix);
     }
@@ -118,7 +118,7 @@ public class MyWeekView extends StandardView {
 
     @Install(to = "timeEntriesDataGrid.create", subject = "afterSaveHandler")
     private void timeEntriesDataGridCreateAfterSaveHandler(final TimeEntry entry) {
-        // The date may be outside the week: reload instead of keeping the saved instance.
+        // Дата может оказаться вне недели: перезагружаем, а не оставляем сохранённый экземпляр.
         timeEntriesDl.load();
     }
 
@@ -154,8 +154,8 @@ public class MyWeekView extends StandardView {
     }
 
     /**
-     * A new history entry per week, so browser Back returns the previous week.
-     * The view reads the week in {@link #onQueryParametersChange}, as for a link.
+     * Новая запись истории на каждую неделю, чтобы «Назад» в браузере возвращал прошлую неделю.
+     * Экран читает неделю в {@link #onQueryParametersChange}, как и при переходе по ссылке.
      */
     private void navigateTo(WeekPeriod target) {
         viewNavigators.view(this, MyWeekView.class)
@@ -166,7 +166,7 @@ public class MyWeekView extends StandardView {
     private void showWeek(WeekPeriod shown, boolean updateUrl) {
         week = shown;
         if (updateUrl) {
-            // Before the view is attached getUI() is still empty, hence the current UI.
+            // Пока экран не присоединён, getUI() ещё пуст, поэтому берём текущий UI.
             routeSupport.setQueryParameter(UI.getCurrent(), WEEK_PARAMETER, week.start().toString());
         }
         weekCaption.setText(messageBundle.formatMessage("weekCaption",

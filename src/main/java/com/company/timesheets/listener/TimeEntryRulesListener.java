@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Time tracking rules for {@link TimeEntry}. Runs before commit on every save through {@code DataManager},
- * so the rules hold for forms, services and imports alike. A violation rolls back the whole save.
+ * Правила учёта времени для {@link TimeEntry}. Срабатывает перед коммитом при каждом сохранении через {@code DataManager},
+ * поэтому правила действуют одинаково для форм, сервисов и импорта. Нарушение откатывает всё сохранение.
  */
 @Component
 public class TimeEntryRulesListener {
@@ -50,7 +50,7 @@ public class TimeEntryRulesListener {
     @EventListener
     public void onTimeEntryChanged(EntityChangedEvent<TimeEntry> event) {
         AttributeChanges changes = event.getChanges();
-        // Soft deletion also arrives as DELETED, with every attribute's pre-delete value in the changes.
+        // Мягкое удаление тоже приходит как DELETED, а в изменениях лежат значения всех атрибутов до удаления.
         if (event.getType() == EntityChangedEvent.Type.DELETED) {
             checkDeletion(toStatus(changes.getOldValue("status")));
             return;
@@ -99,7 +99,7 @@ public class TimeEntryRulesListener {
                 && (entry.getRejectionReason() == null || entry.getRejectionReason().isBlank())) {
             throw violation("timeEntry.rejectionReasonRequired");
         }
-        // Approved time is closed only into a billing record (MonthClosingService), so none of it is lost.
+        // Одобренное время закрывается только в запись биллинга (MonthClosingService), поэтому ничего не теряется.
         boolean closingApproved = statusChanged && oldStatus == TimeEntryStatus.APPROVED;
         if (closingApproved && entry.getBillingRecordId() == null) {
             throw violation("timeEntry.closeApprovedThroughBilling");
@@ -142,7 +142,7 @@ public class TimeEntryRulesListener {
         if (entry.getSpentTime() == null || entry.getSpentTime().minutes() == 0) {
             throw violation("timeEntry.spentTimeNotPositive");
         }
-        // The saved row is already flushed, so the query counts it too.
+        // Сохранённая строка уже сброшена в базу (flush), поэтому запрос учитывает и её.
         List<TimeEntry> sameDay = dataManager.load(TimeEntry.class)
                 .query("select e from ts_TimeEntry e where e.user = :user and e.date = :date and e.status <> :rejected")
                 .parameter("user", entry.getUser())

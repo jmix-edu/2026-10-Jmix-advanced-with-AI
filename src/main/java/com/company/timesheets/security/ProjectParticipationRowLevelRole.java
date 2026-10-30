@@ -7,7 +7,7 @@ import io.jmix.security.role.annotation.JpqlRowLevelPolicy;
 import io.jmix.security.role.annotation.RowLevelRole;
 
 /**
- * Projects, their tasks and participants only where the current user takes part. For every timesheet role.
+ * Проекты, их задачи и участники — только там, где участвует текущий пользователь. Для всех ролей табеля.
  */
 @RowLevelRole(name = "Project participation", code = ProjectParticipationRowLevelRole.CODE)
 public interface ProjectParticipationRowLevelRole {

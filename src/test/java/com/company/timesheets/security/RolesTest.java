@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Timesheet roles from the user's side, through the ordinary DataManager: specs/03_access_control/01-roles.spec.adoc.
+ * Роли табеля со стороны пользователя, через обычный DataManager: specs/03_access_control/01-roles.spec.adoc.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -167,7 +167,7 @@ class RolesTest {
         });
         systemAuthenticator.runWithUser(fixture.closer, () -> {
             assertThat(projectAccessSupport.isPermitted(TimesheetsPolicies.MONTH_CLOSING)).isTrue();
-            // Nothing approved last month: the closing runs and bills nothing.
+            // В прошлом месяце ничего не одобрено: закрытие проходит и ничего не выставляет в биллинг.
             assertThat(monthClosingService.closeMonth(fixture.projectA.getId(), lastMonth)).isEmpty();
         });
     }

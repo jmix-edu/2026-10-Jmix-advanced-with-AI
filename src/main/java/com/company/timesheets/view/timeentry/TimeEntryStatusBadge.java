@@ -7,13 +7,13 @@ import io.jmix.core.MetadataTools;
 import org.jspecify.annotations.Nullable;
 
 /**
- * How a time entry status looks in grids and in the form: one place for the badge and the rejected row.
- * The colors are classes of the project theme (timesheets.css, view/time-entry-status.css).
+ * Как выглядит статус списания в гридах и в форме: одно место для бейджа и отклонённой строки.
+ * Цвета — классы темы проекта (timesheets.css, view/time-entry-status.css).
  */
 public final class TimeEntryStatusBadge {
 
     /**
-     * Part name of a grid row with a rejected entry, styled as {@code vaadin-grid::part(rejected-row)}.
+     * Имя part строки грида с отклонённым списанием, стилизуется как {@code vaadin-grid::part(rejected-row)}.
      */
     public static final String REJECTED_ROW = "rejected-row";
 
@@ -24,8 +24,8 @@ public final class TimeEntryStatusBadge {
     }
 
     /**
-     * Makes the span a status badge. The Jmix badge has no success/error variants under Aura,
-     * so the color comes from the status-* classes.
+     * Превращает span в бейдж статуса. У бейджа Jmix под Aura нет вариантов success/error,
+     * поэтому цвет задают классы status-*.
      */
     public static void apply(Span badge, @Nullable TimeEntryStatus status, MetadataTools metadataTools) {
         badge.getElement().getThemeList().clear();
@@ -46,7 +46,7 @@ public final class TimeEntryStatusBadge {
     }
 
     /**
-     * For a grid partNameGenerator: marks rejected rows, leaves the others as they are.
+     * Для partNameGenerator грида: помечает отклонённые строки, остальные оставляет как есть.
      */
     @Nullable
     public static String rowPartName(TimeEntry entry) {

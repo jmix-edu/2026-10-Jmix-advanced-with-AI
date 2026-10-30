@@ -22,8 +22,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * What the current user may do in a project, by their participation in it.
- * Reads participation without row-level restrictions: the answer must not depend on what the user can see.
+ * Что текущий пользователь может делать в проекте, исходя из его участия в нём.
+ * Читает участие без row-level ограничений: ответ не должен зависеть от того, что видит пользователь.
  */
 @Component("ts_ProjectAccessSupport")
 public class ProjectAccessSupport {
@@ -46,23 +46,23 @@ public class ProjectAccessSupport {
     }
 
     /**
-     * The current user takes part in the project as its manager.
+     * Проверяет, что текущий пользователь участвует в проекте как менеджер.
      */
     public boolean isManager(@Nullable Project project) {
         return project != null && hasProjectRole(project.getId(), List.of(ProjectRoleType.MANAGER));
     }
 
     /**
-     * The current user manages the project of a task or a participant. The {@code project} reference may be
-     * missing from the fetch plan the grid used (a delete from a grid), so then it is read from the database.
+     * Проверяет, что текущий пользователь управляет проектом задачи или участника. Ссылки {@code project} может
+     * не быть в fetch plan грида (удаление из грида), тогда она читается из БД.
      */
     public boolean isManagerOfProjectOf(Object entity) {
         return hasProjectRole(projectIdOf(entity), List.of(ProjectRoleType.MANAGER));
     }
 
     /**
-     * The current user may change the status and the rejection reason of the entry: they are a manager or an
-     * approver of its project and it is not their own entry, or they hold the approve-any policy (admin).
+     * Проверяет, может ли текущий пользователь менять статус и причину отклонения списания: он менеджер или
+     * утверждающий его проекта и списание не его собственное, либо у него политика утверждения любых списаний (админ).
      */
     public boolean canApprove(TimeEntry entry) {
         if (isPermitted(TimesheetsPolicies.APPROVE_ANY_TIME_ENTRY)) {

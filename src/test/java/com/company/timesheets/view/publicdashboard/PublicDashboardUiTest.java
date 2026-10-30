@@ -26,7 +26,7 @@ import static com.company.timesheets.test_support.AnonymousAuthentication.runWit
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The public dashboard opens for the anonymous user and fills its figures and charts' containers.
+ * Публичный дашборд открывается для анонимного пользователя и заполняет свои показатели и контейнеры графиков.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})

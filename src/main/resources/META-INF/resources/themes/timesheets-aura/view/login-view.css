@@ -1,4 +1,4 @@
-/* Predefined styles for the LoginView */
+/* Готовые стили для LoginView */
 
 .jmix-login-main-layout jmix-login-form::part(form) {
     --vaadin-login-form-border-radius: var(--vaadin-radius-l);
@@ -8,8 +8,8 @@
     border: 1px solid var(--vaadin-border-color);
 }
 
-/* Sign-up and activation (spec 03/03): a narrow column like the login form.
-   max-width, not width: vbox gets width 100% as an inline style, which a class rule cannot override. */
+/* Регистрация и активация (spec 03/03): узкая колонка, как у формы входа.
+   max-width, а не width: vbox получает width 100% inline-стилем, и правило класса его не перебьёт. */
 .registration-box {
     max-width: 22rem;
     gap: var(--vaadin-gap-m);

@@ -62,8 +62,8 @@ public class TimeEntry {
     private String rejectionReason;
 
     /**
-     * Billing record in the {@code reports} store that this entry was closed into. No foreign key:
-     * the record lives in another database. Set only by {@code MonthClosingService}.
+     * Запись биллинга в хранилище {@code reports}, в которую закрыто это списание. Без внешнего ключа:
+     * запись лежит в другой базе. Заполняет только {@code MonthClosingService}.
      */
     @Column(name = "BILLING_RECORD_ID")
     private UUID billingRecordId;

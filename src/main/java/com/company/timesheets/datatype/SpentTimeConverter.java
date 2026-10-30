@@ -4,7 +4,7 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
 /**
- * Stores {@link SpentTime} as a number of minutes.
+ * Хранит {@link SpentTime} как число минут.
  */
 @Converter(autoApply = true)
 public class SpentTimeConverter implements AttributeConverter<SpentTime, Long> {

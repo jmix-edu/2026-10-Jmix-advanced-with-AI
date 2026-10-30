@@ -8,16 +8,16 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * This configuration complements standard security configurations that come from Jmix modules (security-flowui, oidc,
+ * Эта конфигурация дополняет стандартные конфигурации безопасности из модулей Jmix (security-flowui, oidc,
  * authserver).
  * <p>
- * You can configure custom API endpoints security by defining {@link SecurityFilterChain} beans in this class.
- * In most cases, custom SecurityFilterChain must be applied first, so the proper
- * {@link org.springframework.core.annotation.Order} should be defined for the bean. The order value from the
- * {@link io.jmix.core.JmixSecurityFilterChainOrder#CUSTOM} is guaranteed to be smaller than any other filter chain
- * order from Jmix.
+ * Безопасность собственных API-эндпоинтов настраивается бинами {@link SecurityFilterChain} в этом классе.
+ * Обычно собственный SecurityFilterChain должен применяться первым, поэтому бину нужно задать подходящий
+ * {@link org.springframework.core.annotation.Order}. Значение порядка из
+ * {@link io.jmix.core.JmixSecurityFilterChainOrder#CUSTOM} гарантированно меньше порядка любой другой цепочки
+ * фильтров Jmix.
  * <p>
- * Example:
+ * Пример:
  *
  * <pre>
  * &#064;Bean
@@ -47,8 +47,8 @@ public class TimesheetsSecurityConfiguration {
         return http.build();
     }
 
-    // Actuator: health and info without sign-in, every other endpoint refused to everyone (spec 04/01).
-    // Paths, not EndpointRequest: that one lives in spring-boot-security, which Jmix does not use.
+    // Actuator: health и info без входа, все остальные эндпоинты закрыты для всех (спека 04/01).
+    // Пути, а не EndpointRequest: он находится в spring-boot-security, который Jmix не использует.
     @Bean
     @Order(JmixSecurityFilterChainOrder.CUSTOM)
     SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {

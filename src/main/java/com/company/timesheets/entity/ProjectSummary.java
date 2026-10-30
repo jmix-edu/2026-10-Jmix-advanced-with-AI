@@ -10,13 +10,13 @@ import io.jmix.core.metamodel.annotation.JmixProperty;
 import java.util.UUID;
 
 /**
- * Per-project totals for a manager. Calculated by {@code HoursReportService}, never stored.
+ * Итоги по проектам для руководителя. Вычисляются в {@code HoursReportService}, не хранятся.
  */
 @JmixEntity(name = "ts_ProjectSummary", annotatedPropertiesOnly = true)
 public class ProjectSummary {
 
     /**
-     * Same as the project id.
+     * Совпадает с id проекта.
      */
     @JmixId
     @JmixProperty(mandatory = true)

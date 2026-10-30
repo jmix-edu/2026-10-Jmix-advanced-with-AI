@@ -120,7 +120,7 @@ public class LoginView extends StandardView implements LocaleChangeObserver {
                             .withRememberMe(login.isRememberMe())
             );
         } catch (final AccountExpiredException e) {
-            // Spec 03/05: the password was right, the contract is over; say so instead of "incorrect password".
+            // Спека 03/05: пароль верный, но контракт закончился; говорим об этом вместо «неверный пароль».
             log.warn("Login of '{}' refused: contract ended", event.getUsername());
             notifications.create(contractEndedMessage(event.getUsername()))
                     .withType(Notifications.Type.WARNING)

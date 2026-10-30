@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@code 0:00} is an error of the spent time field; {@code null} is left to {@code @NotNull}.
+ * {@code 0:00} — ошибка поля затраченного времени; {@code null} оставлен на {@code @NotNull}.
  */
 class PositiveSpentTimeValidatorTest {
 

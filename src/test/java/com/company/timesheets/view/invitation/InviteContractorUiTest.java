@@ -26,7 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The invitation dialog loads and preselects a member role: specs/03_access_control/05-contractor-invitation.
+ * Диалог приглашения загружает и заранее выбирает роль участника: specs/03_access_control/05-contractor-invitation.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})

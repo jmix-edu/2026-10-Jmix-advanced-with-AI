@@ -27,7 +27,7 @@ import javax.sql.DataSource;
 @StyleSheet(Aura.STYLESHEET)
 @StyleSheet(JmixAura.STYLESHEET)
 @StyleSheet("themes/timesheets-aura/styles.css")
-// Light/dark switch in the user menu (userMenu_themeSwitch): the script sets the color-scheme Aura relies on.
+// Переключатель светлой/тёмной темы в меню пользователя (userMenu_themeSwitch): скрипт задаёт color-scheme, на который опирается Aura.
 @JsModule("./src/theme/color-scheme-switching-support.js")
 //@ColorScheme(ColorScheme.Value.DARK)
 @PWA(name = "Timesheets", shortName = "Timesheets", offline = false)

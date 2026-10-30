@@ -12,10 +12,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * Keeps admin off the password 'admin' that the initial changelog gives it (spec 04/01). Runs after Liquibase and
- * before the web server accepts requests: replaces the default password with
- * {@code timesheets.admin.initial-password}, or stops the startup when there is none.
- * Enabled with {@code timesheets.admin.require-initial-password=true}, only the prod profile does so.
+ * Не оставляет admin с паролем 'admin', который задаёт начальный changelog (спека 04/01). Срабатывает после Liquibase
+ * и до того, как веб-сервер начнёт принимать запросы: заменяет пароль по умолчанию на
+ * {@code timesheets.admin.initial-password} или останавливает запуск, если его нет.
+ * Включается через {@code timesheets.admin.require-initial-password=true}; так делает только профиль prod.
  */
 @Component("ts_AdminPasswordInitializer")
 @ConditionalOnProperty(name = "timesheets.admin.require-initial-password", havingValue = "true")
@@ -43,7 +43,7 @@ public class AdminPasswordInitializer implements SmartInitializingSingleton {
         this.initialPassword = initialPassword;
     }
 
-    // No user is signed in during startup
+    // Во время запуска ни один пользователь не вошёл
     @Override
     public void afterSingletonsInstantiated() {
         systemAuthenticator.runWithSystem(this::replaceDefaultPassword);

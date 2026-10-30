@@ -14,9 +14,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * A project cannot be closed while it has approved time entries: they must be billed by closing their months
- * first, otherwise that time would never reach billing. Nor can it be closed while one of its months is being
- * closed: that closing has not committed yet, so its entries still look approved.
+ * Проект нельзя закрыть, пока в нём есть одобренные списания: сначала их нужно выставить в биллинг, закрыв
+ * их месяцы, иначе это время никогда не попадёт в биллинг. Нельзя закрыть его и пока закрывается один из его
+ * месяцев: это закрытие ещё не закоммичено, поэтому его списания всё ещё выглядят одобренными.
  */
 @Component
 public class ProjectClosingListener {

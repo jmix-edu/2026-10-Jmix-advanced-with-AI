@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * admin's password on the first production start: specs/04_deployment_operations/01-production-profile.spec.adoc.
- * The initializer is off in tests; each test builds one with its own initial password and runs it as on startup.
+ * Пароль admin при первом запуске в production: specs/04_deployment_operations/01-production-profile.spec.adoc.
+ * В тестах инициализатор выключен; каждый тест создаёт свой со своим начальным паролем и запускает его, как при старте.
  */
 @SpringBootTest
 @ActiveProfiles("test")

@@ -307,6 +307,10 @@ admin.
 . Dev-пароли тоже вынесены в переменные окружения: `DB_USERNAME`,
   `DB_PASSWORD`, `REPORTS_DB_PASSWORD` (`REPORTS_DB_USERNAME`, по умолчанию
   `root`), `LDAP_MANAGER_PASSWORD`, `UI_LOGIN_DEFAULT_PASSWORD` (необязательно).
+  _Пересмотрено позже:_ проект учебный и должен запускаться без настройки,
+  поэтому у всех dev-переменных есть значения по умолчанию в
+  `application-dev.properties` (`jmix`/`jmix`, `root`/`root`, `admin`, `admin`).
+  Переменные окружения их переопределяют. Прод по-прежнему без секретов в репозитории.
 . Сидер выключен по умолчанию, включается в dev.
 . Health: обе базы, диск, ping. Почта, LDAP и Vault в статус не входят.
 . Vault: токен из `VAULT_TOKEN`. AppRole — в спеке про Docker.

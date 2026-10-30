@@ -20,7 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Read-only hours report. All calculations live in {@link HoursReportService}.
+ * Отчёт по часам только для чтения. Все вычисления — в {@link HoursReportService}.
  */
 @Route(value = "hours-report", layout = MainView.class)
 @ViewController(id = "ts_HoursReportView")

@@ -8,8 +8,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
- * JUnit extension for providing system authentication in integration tests.
- * Should be used in {@code @ExtendWith} annotation on the test class.
+ * JUnit-расширение, которое даёт системную аутентификацию в интеграционных тестах.
+ * Подключается аннотацией {@code @ExtendWith} на тестовом классе.
  */
 public class AuthenticatedAsAdmin implements BeforeEachCallback, AfterEachCallback {
 

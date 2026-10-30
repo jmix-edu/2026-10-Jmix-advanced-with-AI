@@ -29,7 +29,7 @@ import static com.company.timesheets.test_support.AnonymousAuthentication.runWit
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A contractor whose contract ended sees why sign-in fails: specs/03_access_control/05-contractor-invitation.
+ * Подрядчик с истёкшим контрактом видит, почему вход не удался: specs/03_access_control/05-contractor-invitation.
  */
 @UiTest
 @SpringBootTest(classes = {TimesheetsApplication.class, FlowuiTestAssistConfiguration.class})

@@ -10,8 +10,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * One point of a public dashboard chart: a label and hours. Calculated by {@code PublicDashboardService},
- * never stored. Hours are a plain number because charts need one.
+ * Одна точка графика публичного дашборда: подпись и часы. Вычисляется в {@code PublicDashboardService},
+ * не хранится. Часы — простое число, потому что графикам нужно число.
  */
 @JmixEntity(name = "ts_DashboardValue", annotatedPropertiesOnly = true)
 public class DashboardValue {

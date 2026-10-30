@@ -42,11 +42,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fills an empty database with demo data on startup: when the only user is admin and there are no projects.
- * Enabled with {@code timesheets.demo-data.enabled=true}, only the dev profile does so (spec 04/01).
+ * Заполняет пустую базу демо-данными при старте: когда единственный пользователь — admin и проектов нет.
+ * Включается через {@code timesheets.demo-data.enabled=true}; так делает только профиль dev (спека 04/01).
  * <p>
- * Everything is saved through DataManager, so the time entry rules apply: entries are created as NEW
- * and then moved through the allowed status transitions.
+ * Всё сохраняется через DataManager, поэтому действуют правила списаний: списания создаются в статусе NEW
+ * и затем проходят разрешённые переходы статусов.
  */
 @Component
 @ConditionalOnProperty(name = "timesheets.demo-data.enabled", havingValue = "true")
@@ -72,9 +72,9 @@ public class DemoDataSeeder {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        // Startup has no logged-in user; DataManager needs an authentication.
+        // При старте нет вошедшего пользователя, а DataManager нужна аутентификация.
         systemAuthenticator.runWithSystem(() -> {
-            // Demo data must not prevent the application from starting.
+            // Демо-данные не должны мешать запуску приложения.
             if (isEmpty()) {
                 log.info("Database has only admin, creating demo data");
                 try {
@@ -93,8 +93,8 @@ public class DemoDataSeeder {
     }
 
     /**
-     * Runs on every start, also on a database seeded before the roles existed (spec 03/01): adds the contractor
-     * and the role assignments that are missing, changes nothing that is already there.
+     * Выполняется при каждом старте, в том числе на базе, заполненной до появления ролей (спека 03/01): добавляет
+     * недостающих подрядчика и назначения ролей, не меняет то, что уже есть.
      */
     private void ensureRoles() {
         ensureContractor();
@@ -233,7 +233,7 @@ public class DemoDataSeeder {
         entries.add(entry(migrationScripts, chen, today.minusDays(7), 450, "Customers table"));
         entries.add(entry(migrationCheck, dana, today.minusDays(7), 210, "Row counts"));
         entries.add(entry(migrationScripts, chen, today.minusDays(8), 300, "Invoices table"));
-        // Legacy Support worked last month only, so that month can be closed before the project is.
+        // По Legacy Support работали только в прошлом месяце, поэтому этот месяц можно закрыть раньше проекта.
         LocalDate lastMonthEnd = today.withDayOfMonth(1).minusDays(1);
         entries.add(entry(supportFixes, boris, lastMonthEnd, 240, "Checkout error"));
         entries.add(entry(supportReports, alice, lastMonthEnd, 120, "Monthly report"));
@@ -245,15 +245,15 @@ public class DemoDataSeeder {
         entries.add(entry(crmMapping, dana, today, 180, "Error handling"));
         entries.add(entry(websiteLayout, alice, today, 60, "Review"));
 
-        // Status mix: approved and rejected entries across projects.
+        // Смесь статусов: одобренные и отклонённые списания по проектам.
         for (int i : new int[]{0, 1, 2, 4, 6, 8, 9, 12}) {
             approve(entries.get(i));
         }
         reject(entries.get(3), "Duplicates the entry for the product pages");
         reject(entries.get(10), "Wrong task: orders belong to a separate ticket");
 
-        // Legacy Support: approve everything but one entry, bill last month, then close the project.
-        // Closing the month moves the approved entries to CLOSED; the last one stays NEW.
+        // Legacy Support: одобряем всё, кроме одного списания, выставляем счёт за прошлый месяц, затем закрываем проект.
+        // Закрытие месяца переводит одобренные списания в CLOSED; последнее остаётся NEW.
         for (int i = 15; i <= 18; i++) {
             approve(entries.get(i));
         }
@@ -261,7 +261,7 @@ public class DemoDataSeeder {
         support.setStatus(ProjectStatus.CLOSED);
         dataManager.saveWithoutReload(support);
 
-        // A finished task: its entries stay, new time cannot be entered.
+        // Завершённая задача: её списания остаются, новое время ввести нельзя.
         migrationCheck.setStatus(TaskStatus.INACTIVE);
         dataManager.saveWithoutReload(migrationCheck);
     }
@@ -311,7 +311,7 @@ public class DemoDataSeeder {
     }
 
     /**
-     * @param usersAndRoles pairs of {@link User} and {@link ProjectRole}
+     * @param usersAndRoles пары {@link User} и {@link ProjectRole}
      */
     private void participants(Project project, Object... usersAndRoles) {
         SaveContext saveContext = new SaveContext();

@@ -2,7 +2,7 @@
 <view xmlns="http://jmix.io/schema/flowui/view"
       title="msg://projectCardsView.title">
     <data>
-        <!-- Calculated by HoursReportService, see the load delegate in the controller. -->
+        <!-- Считает HoursReportService, см. load-делегат в контроллере. -->
         <collection id="projectSummariesDc" class="com.company.timesheets.entity.ProjectSummary">
             <loader id="projectSummariesDl" readOnly="true"/>
         </collection>
@@ -11,7 +11,7 @@
         <dataLoadCoordinator auto="true"/>
     </facets>
     <layout>
-        <!-- Cards are added by the controller; the grid layout is in view/project-cards.css. -->
+        <!-- Карточки добавляет контроллер; раскладка сетки — в view/project-cards.css. -->
         <div id="cardsContainer" classNames="project-cards" width="100%"/>
     </layout>
 </view>

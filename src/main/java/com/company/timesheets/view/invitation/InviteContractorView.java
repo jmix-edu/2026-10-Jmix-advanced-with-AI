@@ -24,8 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
 
 /**
- * Dialog where a project manager invites a contractor by email: specs/03_access_control/05-contractor-invitation.
- * Opened from the participants tab of the project form; the caller passes the project with {@link #setProject}.
+ * Диалог, в котором руководитель проекта приглашает подрядчика по email: specs/03_access_control/05-contractor-invitation.
+ * Открывается с вкладки участников формы проекта; вызывающий код передаёт проект через {@link #setProject}.
  */
 @ViewController(id = "ts_InviteContractorView")
 @ViewDescriptor(path = "invite-contractor-view.xml")
@@ -66,7 +66,7 @@ public class InviteContractorView extends StandardView {
     @Subscribe
     public void onBeforeShow(final BeforeShowEvent event) {
         projectText.setText(messageBundle.formatMessage("project.text", project.getName()));
-        // The contract must run at least until tomorrow; the end day itself is still a working day.
+        // Контракт должен действовать хотя бы до завтра; сам день окончания ещё рабочий.
         contractEndDateField.setMin(timeSource.now().toLocalDate().plusDays(1));
     }
 

@@ -1,6 +1,6 @@
-/* Public dashboard: figures and charts in an adaptive grid, one column on a narrow screen.
-   The minimum widths are layout; colors, spacing, radii and shadows come from theme tokens.
-   Charts are drawn by ECharts on a canvas and take the dark theme from the <html theme> attribute. */
+/* Публичный дашборд: цифры и графики в адаптивной сетке, на узком экране в одну колонку.
+   Минимальные ширины — раскладка; цвета, отступы, скругления и тени берутся из токенов темы.
+   Графики рисует ECharts на canvas, тёмную тему они берут из атрибута <html theme>. */
 .public-dashboard {
     padding: var(--vaadin-padding-l);
     gap: var(--vaadin-gap-l);

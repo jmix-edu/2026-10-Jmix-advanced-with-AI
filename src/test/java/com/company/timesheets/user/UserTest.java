@@ -16,7 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Sample integration test for the User entity.
+ * Пример интеграционного теста для сущности User.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
@@ -36,17 +36,17 @@ public class UserTest {
 
     @Test
     void test_saveAndLoad() {
-        // Create and save a new User
+        // Создаём и сохраняем нового User
         User user = dataManager.create(User.class);
         user.setUsername("test-user-" + System.currentTimeMillis());
         user.setPassword(passwordEncoder.encode("test-passwd"));
         savedUser = dataManager.save(user);
 
-        // Check the new user can be loaded
+        // Проверяем, что нового пользователя можно загрузить
         User loadedUser = dataManager.load(User.class).id(user.getId()).one();
         assertThat(loadedUser).isEqualTo(user);
 
-        // Check the new user is available through UserRepository
+        // Проверяем, что новый пользователь доступен через UserRepository
         UserDetails userDetails = userRepository.loadUserByUsername(user.getUsername());
         assertThat(userDetails).isEqualTo(user);
     }

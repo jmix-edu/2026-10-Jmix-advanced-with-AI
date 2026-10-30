@@ -1,8 +1,8 @@
 package com.company.timesheets.listener;
 
 /**
- * Thrown when saving or removing a {@link com.company.timesheets.entity.TimeEntry} breaks a time tracking rule.
- * The message is localized and can be shown to the user as is.
+ * Выбрасывается, когда сохранение или удаление {@link com.company.timesheets.entity.TimeEntry} нарушает правило учёта времени.
+ * Сообщение локализовано, его можно показать пользователю как есть.
  */
 public class TimeEntryRuleException extends RuntimeException {
 

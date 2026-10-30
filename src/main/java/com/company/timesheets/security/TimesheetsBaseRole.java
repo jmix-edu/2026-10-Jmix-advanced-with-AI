@@ -17,24 +17,25 @@ import io.jmix.securityflowui.role.annotation.MenuPolicy;
 import io.jmix.securityflowui.role.annotation.ViewPolicy;
 
 /**
- * What every timesheet user has: own time entries and the screens around them, projects to read.
- * Not assigned alone: Employee, Contractor and Project manager extend it.
- * Rows are limited by the row-level roles, see specs/03_access_control/01-roles.spec.adoc.
+ * То, что есть у каждого пользователя табеля: свои списания и экраны вокруг них, проекты на чтение.
+ * Отдельно не назначается: её расширяют Employee, Contractor и Project manager.
+ * Строки ограничивают роли уровня строк, см. specs/03_access_control/01-roles.spec.adoc.
  */
 @ResourceRole(name = "Timesheets: base", code = TimesheetsBaseRole.CODE, scope = SecurityScope.UI)
 public interface TimesheetsBaseRole extends UiMinimalRole {
 
     String CODE = "ts-base";
 
-    @MenuPolicy(menuIds = {"TimeEntries.my", "TimeEntries.myWeek", "Tasks.my", "ts_Task.list-simple", "ts_Project.list",
-            "ts_PublicDashboardView"})
-    @ViewPolicy(viewIds = {"TimeEntries.my", "TimeEntries.myWeek", "Tasks.my", "ts_Task.list-simple",
-            "ts_TimeEntry.detail", "ts_Task.lookup", "ts_Project.list", "ts_Project.detail",
+    // TimeEntries.weekSheet: недельная таблица на RevoGrid (спека 02/05); она сохраняет списания по политикам ниже.
+    @MenuPolicy(menuIds = {"TimeEntries.my", "TimeEntries.myWeek", "TimeEntries.weekSheet", "Tasks.my",
+            "ts_Task.list-simple", "ts_Project.list", "ts_PublicDashboardView"})
+    @ViewPolicy(viewIds = {"TimeEntries.my", "TimeEntries.myWeek", "TimeEntries.weekSheet", "Tasks.my",
+            "ts_Task.list-simple", "ts_TimeEntry.detail", "ts_Task.lookup", "ts_Project.list", "ts_Project.detail",
             "ts_PublicDashboardView"})
     void screens();
 
-    // Status and rejection reason are modifiable here; the form allows them only to the project's
-    // manager or approver (ProjectAccessSupport).
+    // Статус и причину отклонения здесь можно менять; форма разрешает это только руководителю
+    // или согласующему проекта (ProjectAccessSupport).
     @EntityAttributePolicy(entityClass = TimeEntry.class,
             attributes = {"version", "date", "spentTime", "status", "description", "rejectionReason", "task", "user",
                     "createdBy", "createdDate", "lastModifiedBy", "lastModifiedDate", "deletedBy", "deletedDate"},
@@ -61,11 +62,11 @@ public interface TimesheetsBaseRole extends UiMinimalRole {
     @EntityPolicy(entityClass = ProjectParticipant.class, actions = EntityPolicyAction.READ)
     void projectParticipant();
 
-    // Attributes of Project are given by the roles that extend this one.
+    // Атрибуты Project дают роли, которые расширяют эту.
     @EntityPolicy(entityClass = Project.class, actions = EntityPolicyAction.READ)
     void project();
 
-    // Names only: no password or other account fields.
+    // Только имена: без пароля и других полей учётной записи.
     @EntityAttributePolicy(entityClass = User.class, attributes = {"username", "firstName", "lastName", "email"},
             action = EntityAttributePolicyAction.VIEW)
     @EntityPolicy(entityClass = User.class, actions = EntityPolicyAction.READ)

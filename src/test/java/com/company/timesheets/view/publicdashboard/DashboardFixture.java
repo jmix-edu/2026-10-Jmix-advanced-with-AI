@@ -19,8 +19,8 @@ import java.time.YearMonth;
 import java.util.UUID;
 
 /**
- * One open project with a typed task: this month 1:30 approved + 0:30 closed counts, 2:00 new and 1:00 rejected
- * do not; last month 3:00 approved. Created as admin, removed with plain SQL.
+ * Один открытый проект с типизированной задачей: в этом месяце считаются 1:30 одобренных + 0:30 закрытых, 2:00 новых
+ * и 1:00 отклонённых — нет; в прошлом месяце 3:00 одобренных. Создаётся от admin, удаляется чистым SQL.
  */
 class DashboardFixture {
 
@@ -71,7 +71,7 @@ class DashboardFixture {
             entry(task, admin, today, 120, null);
             entry(task, admin, today, 60, TimeEntryStatus.REJECTED);
             entry(task, admin, YearMonth.now().minusMonths(1).atDay(1), 180, TimeEntryStatus.APPROVED);
-            // CLOSED is set only by month closing; plain SQL puts one entry there for the count.
+            // CLOSED ставит только закрытие месяца; чистый SQL переводит туда одно списание для подсчёта.
             jdbc.update("update TS_TIME_ENTRY set STATUS = 'closed' where ID = ?", closedLater.getId());
         });
     }

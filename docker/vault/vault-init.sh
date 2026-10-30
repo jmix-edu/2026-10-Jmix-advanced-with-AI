@@ -1,7 +1,7 @@
 #!/bin/sh
-# Prepares Vault on every start of the Docker stack (spec 04/02):
-# initializes it once, unseals it, puts the passwords from the "secrets" volume into secret/timesheets
-# and gives the application an AppRole that can only read them.
+# Готовит Vault при каждом запуске Docker-стека (spec 04/02):
+# один раз инициализирует, распечатывает, кладёт пароли из тома "secrets" в secret/timesheets
+# и выдаёт приложению AppRole, который может их только читать.
 set -eu
 
 KEYS=/vault-keys
@@ -22,7 +22,7 @@ if [ ! -s "$KEYS/unseal_key" ]; then
     exit 1
 fi
 
-# Exit code 2: sealed
+# Код выхода 2: запечатан
 if ! vault status > /dev/null; then
     vault operator unseal "$(cat "$KEYS/unseal_key")" > /dev/null
     echo "Vault unsealed"
@@ -56,7 +56,7 @@ vault read -field=role_id auth/approle/role/timesheets/role-id > "$APPROLE/role_
 if [ ! -s "$APPROLE/secret_id" ]; then
     vault write -f -field=secret_id auth/approle/role/timesheets/secret-id > "$APPROLE/secret_id"
 fi
-# The application runs under its own user
+# Приложение работает под своим пользователем
 chmod 0444 "$APPROLE/role_id" "$APPROLE/secret_id"
 
 echo "Vault ready: secret/timesheets, AppRole timesheets"

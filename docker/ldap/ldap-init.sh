@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sets the demo LDAP users' password from the "secrets" volume (spec 04/02). Safe to run on every start.
+# Ставит пароль демо-пользователям LDAP из тома "secrets" (spec 04/02). Можно запускать при каждом старте.
 set -eu
 
 for user in ivanov petrova sidorov; do

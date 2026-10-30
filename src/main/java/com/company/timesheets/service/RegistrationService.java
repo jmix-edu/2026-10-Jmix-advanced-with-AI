@@ -40,10 +40,10 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Self-registration by email: specs/03_access_control/03-registration.spec.adoc.
+ * Самостоятельная регистрация по email: specs/03_access_control/03-registration.spec.adoc.
  * <p>
- * Called by anonymous visitors, who have no rights on entities, so it reads and writes without access constraints.
- * The database keeps only the SHA-256 of an activation token; the token itself travels in the email link.
+ * Вызывается анонимными посетителями, у которых нет прав на сущности, поэтому читает и пишет без ограничений доступа.
+ * В БД хранится только SHA-256 токена активации; сам токен передаётся в ссылке из письма.
  */
 @Service
 public class RegistrationService {
@@ -51,14 +51,14 @@ public class RegistrationService {
     public static final int MIN_PASSWORD_LENGTH = 8;
 
     /**
-     * Roles of a user who activated their account: an employee with their own time entries.
+     * Роли пользователя, активировавшего учётную запись: сотрудник со своими списаниями.
      */
     static final List<String> RESOURCE_ROLES = List.of(EmployeeRole.CODE);
     static final List<String> ROW_LEVEL_ROLES =
             List.of(ProjectParticipationRowLevelRole.CODE, OwnTimeEntriesRowLevelRole.CODE);
 
     /**
-     * Roles of an invited contractor, as erik has in the demo data (spec 03/05).
+     * Роли приглашённого подрядчика, как у erik в демо-данных (spec 03/05).
      */
     static final List<String> CONTRACTOR_RESOURCE_ROLES = List.of(ContractorRole.CODE);
     static final List<String> CONTRACTOR_ROW_LEVEL_ROLES = ROW_LEVEL_ROLES;
@@ -67,8 +67,8 @@ public class RegistrationService {
     private static final int TOKEN_BYTES = 32;
 
     /**
-     * What registration tells the visitor. The same for a new, a waiting and an already used address,
-     * so the answer does not reveal who is registered.
+     * Что регистрация сообщает посетителю. Одно и то же для нового, ждущего и уже занятого адреса,
+     * чтобы ответ не выдавал, кто зарегистрирован.
      */
     public enum RegistrationResult {
         LINK_SENT,
@@ -98,8 +98,8 @@ public class RegistrationService {
     }
 
     /**
-     * Creates an inactive user for a new address, or gives a waiting one a new link, and emails the link.
-     * An active user, or one switched off by an administrator, is left alone and gets no email.
+     * Создаёт неактивного пользователя для нового адреса или выдаёт ждущему новую ссылку и отправляет её письмом.
+     * Активного пользователя или отключённого администратором не трогает, письмо ему не уходит.
      */
     public RegistrationResult register(String email, @Nullable String firstName, @Nullable String lastName) {
         String username = normalize(email);
@@ -116,7 +116,7 @@ public class RegistrationService {
             user.setLastName(lastName);
             user.setActive(false);
             user.setNeedsActivation(true);
-            // Nobody knows this password, so the account cannot be used before activation.
+            // Этот пароль никто не знает, поэтому до активации учётной записью не воспользоваться.
             user.setPassword(passwordEncoder.encode(newToken()));
         }
         String token = issueToken(user, Duration.ofHours(activationHours));
@@ -132,8 +132,8 @@ public class RegistrationService {
     }
 
     /**
-     * Puts a new activation token on the user (the previous link stops working) and returns it for the email.
-     * The user is not saved here.
+     * Выдаёт пользователю новый токен активации (прежняя ссылка перестаёт работать) и возвращает его для письма.
+     * Пользователь здесь не сохраняется.
      */
     public String issueToken(User user, Duration validity) {
         String token = newToken();
@@ -143,21 +143,21 @@ public class RegistrationService {
     }
 
     /**
-     * A password nobody knows, for an account that must not be usable before activation.
+     * Возвращает пароль, который никто не знает, для учётной записи, недоступной до активации.
      */
     public String unusablePassword() {
         return passwordEncoder.encode(newToken());
     }
 
     /**
-     * Link to the activation view for the token.
+     * Возвращает ссылку на экран активации для токена.
      */
     public String activationLink(String token) {
         return publicUrl + "/activate?token=" + token;
     }
 
     /**
-     * Projects the user is invited to as a contractor (spec 03/05); empty for a self-registered user.
+     * Возвращает проекты, куда пользователь приглашён подрядчиком (spec 03/05); для самозарегистрированного — пусто.
      */
     public List<ContractorInvitation> invitationsOf(User user) {
         return dataManager.load(ContractorInvitation.class)
@@ -170,7 +170,7 @@ public class RegistrationService {
     }
 
     /**
-     * The user waiting for activation with this link, if the link is still valid.
+     * Возвращает пользователя, ждущего активации по этой ссылке, если ссылка ещё действует.
      */
     public Optional<User> findByToken(@Nullable String token) {
         if (token == null || token.isBlank()) {
@@ -185,19 +185,19 @@ public class RegistrationService {
     }
 
     /**
-     * Sets the password and activates the user, in one save. A self-registered user gets the employee roles;
-     * an invited contractor (spec 03/05) gets the contractor roles and joins the projects of their invitations,
-     * which are then removed.
+     * Задаёт пароль и активирует пользователя одним сохранением. Самостоятельно зарегистрированный получает роли
+     * сотрудника; приглашённый подрядчик (spec 03/05) — роли подрядчика и участие в проектах из своих приглашений,
+     * которые затем удаляются.
      *
-     * @return the activated user's username, to sign in with
-     * @throws ActivationException if the link is not valid any more or the password is too short
+     * @return username активированного пользователя, для входа
+     * @throws ActivationException если ссылка больше не действует или пароль слишком короткий
      */
     public String activate(String token, String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new ActivationException(messages.formatMessage(getClass(), "activation.passwordTooShort",
                     MIN_PASSWORD_LENGTH));
         }
-        // Checked again: the link may have been used in another tab meanwhile.
+        // Проверяем ещё раз: ссылку могли тем временем использовать в другой вкладке.
         User user = findByToken(token).orElseThrow(() ->
                 new ActivationException(messages.getMessage(getClass(), "activation.linkInvalid")));
         user.setPassword(passwordEncoder.encode(password));
@@ -227,12 +227,13 @@ public class RegistrationService {
     }
 
     /**
-     * Removes accounts that were registered but not activated before their link expired
-     * (specs/03_access_control/04-registration-cleanup.spec.adoc). Called by the Quartz job, on a thread with no
-     * user, hence {@code @Authenticated}. An account someone already referenced (a project participant, time
-     * entries) is kept and logged. Each account goes in its own save, so one failure does not stop the rest.
+     * Удаляет учётные записи, которые зарегистрировали, но не активировали до истечения ссылки
+     * (specs/03_access_control/04-registration-cleanup.spec.adoc). Вызывается Quartz-джобом в потоке без
+     * пользователя, отсюда {@code @Authenticated}. Учётную запись, на которую уже ссылаются (участник проекта,
+     * списания), оставляет и пишет в лог. Каждая запись удаляется своим сохранением, чтобы один сбой
+     * не остановил остальные.
      *
-     * @return how many accounts were removed
+     * @return сколько учётных записей удалено
      */
     @Authenticated
     public int removeExpiredRegistrations() {
@@ -248,8 +249,8 @@ public class RegistrationService {
                 continue;
             }
             try {
-                // First what refers to the account: pending invitations (spec 03/05) are not a use of it.
-                // In one save with the user, EclipseLink deletes the user first and the foreign key fails.
+                // Сначала то, что ссылается на учётную запись: ожидающие приглашения (spec 03/05) её не используют.
+                // В одном сохранении с пользователем EclipseLink удалит пользователя первым, и упадёт внешний ключ.
                 SaveContext dependents = new SaveContext();
                 invitationsOf(user).forEach(dependents::removing);
                 roleAssignments(user.getUsername()).forEach(dependents::removing);
@@ -267,7 +268,7 @@ public class RegistrationService {
     }
 
     /**
-     * Counts soft-deleted rows too: they still hold a foreign key to the user.
+     * Учитывает и soft-deleted строки: они всё ещё держат внешний ключ на пользователя.
      */
     private boolean isReferenced(User user) {
         return count("select count(p) from ts_ProjectParticipant p where p.user.id = :userId", user) > 0

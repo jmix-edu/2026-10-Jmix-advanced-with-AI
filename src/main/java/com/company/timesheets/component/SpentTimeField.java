@@ -26,9 +26,9 @@ import org.springframework.context.ApplicationContextAware;
 import java.util.function.Consumer;
 
 /**
- * Field for a {@link SpentTime} attribute: hours, minutes and quick «+0:15», «+1:00» buttons.
- * Bound, validated and marked required the way standard Jmix fields are: through {@link FieldDelegate}.
- * See specs/02_ui_development/04-spent-time-field.spec.adoc.
+ * Поле для атрибута {@link SpentTime}: часы, минуты и быстрые кнопки «+0:15», «+1:00».
+ * Привязывается, проверяется и помечается обязательным так же, как стандартные поля Jmix: через {@link FieldDelegate}.
+ * См. specs/02_ui_development/04-spent-time-field.spec.adoc.
  */
 public class SpentTimeField extends CustomField<SpentTime> implements SupportsValueSource<SpentTime>,
         SupportsValidation<SpentTime>, SupportsStatusChangeHandler<SpentTimeField>, HasRequired,
@@ -48,12 +48,12 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
     protected FieldDelegate<SpentTimeField, SpentTime, SpentTime> fieldDelegate;
 
     /**
-     * The typed hours or minutes are out of range: the model keeps its last valid value and the field shows an error.
+     * Введённые часы или минуты вне диапазона: модель хранит последнее корректное значение, а поле показывает ошибку.
      */
     protected boolean partsInvalid;
 
     public SpentTimeField() {
-        // The parts are validated here, as one value; their own validation would also flag minutes off the step.
+        // Части проверяются здесь как одно значение; их собственная проверка отметила бы и минуты не по шагу.
         hoursField.setMin(0);
         hoursField.setMax(MAX_HOURS);
         hoursField.setStepButtonsVisible(true);
@@ -142,12 +142,12 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
         add60Button.setVisible(!readOnly);
     }
 
-    // --- value conversion, see SpentTimeFieldTest ---
+    // --- преобразование значения, см. SpentTimeFieldTest ---
 
     /**
-     * Hours and minutes typed in the field. Both empty is no value, one empty counts as zero.
+     * Часы и минуты, введённые в поле. Оба поля пусты — значения нет, одно пустое считается нулём.
      *
-     * @throws IllegalArgumentException when hours are not within 0..24 or minutes within 0..59
+     * @throws IllegalArgumentException если часы не в диапазоне 0..24 или минуты не в диапазоне 0..59
      */
     @Nullable
     static SpentTime toSpentTime(@Nullable Integer hours, @Nullable Integer minutes) {
@@ -170,7 +170,7 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
     }
 
     /**
-     * Adds minutes for a quick button; no value counts as {@code 0:00}.
+     * Добавляет минуты для быстрой кнопки; отсутствие значения считается как {@code 0:00}.
      */
     static SpentTime plus(@Nullable SpentTime value, long minutes) {
         return new SpentTime((value == null ? 0 : value.minutes()) + minutes);
@@ -179,7 +179,7 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
     record Parts(@Nullable Integer hours, @Nullable Integer minutes) {
     }
 
-    // --- Jmix field contract, delegated as in the standard fields ---
+    // --- контракт поля Jmix, делегирован, как в стандартных полях ---
 
     @Nullable
     @Override
@@ -209,7 +209,7 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
 
     @Override
     public void setInvalid(boolean invalid) {
-        // Called from the constructor, before the delegate exists
+        // Вызывается из конструктора, когда делегата ещё нет
         if (fieldDelegate != null) {
             fieldDelegate.setInvalid(invalid);
         } else {
@@ -225,7 +225,7 @@ public class SpentTimeField extends CustomField<SpentTime> implements SupportsVa
 
     @Override
     public void setErrorMessage(@Nullable String errorMessage) {
-        // Called from the constructor, before the delegate exists
+        // Вызывается из конструктора, когда делегата ещё нет
         if (fieldDelegate != null) {
             fieldDelegate.setErrorMessage(errorMessage);
         } else {

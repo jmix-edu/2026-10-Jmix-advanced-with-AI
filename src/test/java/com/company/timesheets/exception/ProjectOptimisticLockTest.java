@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * Two managers save the same project, from specs/01_data_manipulation/08-queries-locking.spec.adoc: the second
- * save is rejected and the message names who saved first.
+ * Два менеджера сохраняют один проект, по specs/01_data_manipulation/08-queries-locking.spec.adoc: второе
+ * сохранение отклоняется, и сообщение называет, кто сохранил первым.
  */
 @SpringBootTest
 @ExtendWith(AuthenticatedAsAdmin.class)
@@ -85,7 +85,7 @@ class ProjectOptimisticLockTest {
 
     @AfterEach
     void tearDown() {
-        // Plain SQL: soft delete would leave rows in the file-based test database.
+        // Чистый SQL: мягкое удаление оставило бы строки в файловой тестовой базе.
         if (clientId != null) {
             JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             jdbc.update("delete from TS_PROJECT where CLIENT_ID = ?", clientId);

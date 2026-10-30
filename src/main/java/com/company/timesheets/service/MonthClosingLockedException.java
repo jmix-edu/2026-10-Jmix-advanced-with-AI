@@ -3,7 +3,7 @@ package com.company.timesheets.service;
 import java.util.Date;
 
 /**
- * The month of the project is not closed because another closing of the same project is running.
+ * Месяц проекта не закрыт, потому что уже идёт другое закрытие того же проекта.
  */
 public class MonthClosingLockedException extends RuntimeException {
 
@@ -17,14 +17,14 @@ public class MonthClosingLockedException extends RuntimeException {
     }
 
     /**
-     * Login of the user who holds the lock.
+     * Логин пользователя, который держит блокировку.
      */
     public String getUsername() {
         return username;
     }
 
     /**
-     * When the lock was taken.
+     * Когда взята блокировка.
      */
     public Date getSince() {
         return since;
